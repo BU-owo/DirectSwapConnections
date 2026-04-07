@@ -103,6 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = user;
       el("header-email").textContent = user.email;
       show(el("header-user"));
+            show(el("header-nav"));       // ← ADD
+      hide(el("hero-section"));     // ← ADD
       hide(el("view-signin"));
       show(el("view-app"));
       await loadUserState();
@@ -113,9 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
       allListings  = [];
       contactsMap  = {};
       if (unsubListings) { unsubListings(); unsubListings = null; }
-      hide(el("view-app"));
+        hide(el("view-app"));
       show(el("view-signin"));
       hide(el("header-user"));
+      hide(el("header-nav"));       // ← ADD
+      show(el("hero-section"));     // ← ADD
       // Reset sign-in form
       show(el("signin-form-inner"));
       hide(el("signin-sent"));
@@ -192,6 +196,8 @@ function bindEvents() {
   // Char counters
   el("f-pitch").addEventListener("input",   () => el("pitch-count").textContent   = el("f-pitch").value.length);
   el("f-details").addEventListener("input", () => el("details-count").textContent = el("f-details").value.length);
+    el("nav-submit-btn")?.addEventListener("click", () => switchTab("my-listing"));
+  el("nav-browse-btn")?.addEventListener("click", () => switchTab("browse"));
 }
 
 // ── Tab Switching ──────────────────────────────────────────────
