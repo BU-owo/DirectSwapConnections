@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BU Direct Swap Connections</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-bu">BU</span>
+      <span class="logo-name">Direct Swap Connections</span>
+    </div>
+    <div id="header-user" class="header-user hidden">
+      <span id="header-email" class="header-email-text"></span>
+      <button id="signout-btn" class="btn btn-ghost btn-sm">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══ VIEW: SIGN IN ════════════════════════════════════════ -->
+<div id="view-signin" class="view-signin">
+  <div class="signin-card">
+    <div class="signin-brand">🏠</div>
+    <h1>BU Housing Swap</h1>
+    <p class="signin-subtitle">Connect with BU students looking to swap housing assignments. Sign in with your BU email to get started.</p>
+
+    <div id="signin-form-inner">
+      <div class="form-group">
+        <label for="email-input">BU Email Address</label>
+        <input id="email-input" type="email" placeholder="terrier@bu.edu" autocomplete="email" />
+      </div>
+      <button id="send-link-btn" class="btn btn-primary btn-full">Send Sign-In Link</button>
+      <p class="signin-note">We'll send a magic link — no password needed.</p>
+      <div id="signin-error" class="msg msg-error hidden"></div>
+    </div>
+
+    <div id="signin-sent" class="hidden">
+      <div class="msg msg-success">
+        <strong>📬 Check your inbox!</strong><br>
+        We sent a sign-in link to <strong><span id="sent-email-display"></span></strong>.<br>
+        Click the link to continue.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VIEW: APP ════════════════════════════════════════════ -->
+<div id="view-app" class="view-app hidden">
+
+  <!-- Tab Nav -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="browse">🔍 Browse Listings</button>
+    <button class="tab-btn" data-tab="my-listing">📝 My Listing</button>
+  </div>
+
+  <!-- ─── TAB: BROWSE ──────────────────────────────────────── -->
+  <div class="tab-panel" data-panel="browse">
+
+    <!-- Warning banner if no listing submitted yet -->
+    <div id="no-listing-banner" class="banner banner-warning hidden">
+      <span>⚠️ <strong>Submit your own listing to unlock contact info.</strong></span>
+      <button id="go-to-my-listing" class="btn btn-sm btn-primary">Add My Listing →</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-bar-inner">
+        <div class="filter-group">
+          <label>Gender Housing</label>
+          <select id="filter-gender">
+            <option value="">Any</option>
+            <option>Men's</option>
+            <option>Women's</option>
+            <option>Gender Inclusive</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Building</label>
+          <select id="filter-building">
+            <option value="">Any</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Occupancy</label>
+          <select id="filter-occupancy">
+            <option value="">Any</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Bringing Roommate</label>
+          <select id="filter-roommate">
+            <option value="">Any</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Sort By</label>
+          <select id="filter-sort">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="building">Building (A–Z)</option>
+          </select>
+        </div>
+        <button id="clear-filters" class="btn btn-ghost btn-sm filter-clear">Clear</button>
+      </div>
+    </div>
+
+    <!-- Listings -->
+    <div id="listings-container" class="listings-grid">
+      <div class="empty-state"><p>Loading listings…</p></div>
+    </div>
+  </div>
+
+  <!-- ─── TAB: MY LISTING ──────────────────────────────────── -->
+  <div class="tab-panel hidden" data-panel="my-listing">
+    <div class="form-card">
+      <h2 id="form-heading">Add My Listing</h2>
+      <p class="form-subtitle" id="form-subheading">Fill this out to appear in the swap database and unlock contact info for other listings.</p>
+
+      <form id="listing-form" novalidate>
+
+        <!-- ── Current Housing ── -->
+        <div class="form-section">
+          <h3 class="section-title">📍 Your Current Housing</h3>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="f-gender">Housing Assignment Gender <span class="req">*</span></label>
+              <select id="f-gender" required>
+                <option value="">Select...</option>
+                <option>Men's</option>
+                <option>Women's</option>
+                <option>Gender Inclusive</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-building">Current Building <span class="req">*</span></label>
+              <select id="f-building" required>
+                <option value="">Select your building...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group form-group-half">
+            <label for="f-occupancy">Room Occupancy <span class="req">*</span></label>
+            <select id="f-occupancy" required>
+              <option value="">Select...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Do you have a roommate you want to bring? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-label"><input type="radio" name="f-roommate" value="true" required> Yes</label>
+              <label class="radio-label"><input type="radio" name="f-roommate" value="false"> No</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="f-pitch">
+              Pitch Your Room 🏠 <span class="req">*</span>
+              <span class="label-hint">This is public — sell it!</span>
+            </label>
+            <p class="field-hint">What makes your room great? Think: kitchen, view, private bathroom, single-stall bathroom, quiet area, female-only floor, close to campus, etc.</p>
+            <textarea id="f-pitch" rows="4" maxlength="500" placeholder="e.g. Private bathroom, great Charles River view, steps from the Green Line..." required></textarea>
+            <span class="char-counter"><span id="pitch-count">0</span>/500</span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-details">Any Other Important Details <span class="label-hint">Optional</span></label>
+            <textarea id="f-details" rows="3" maxlength="300" placeholder="Anything else worth knowing about your assignment..."></textarea>
+            <span class="char-counter"><span id="details-count">0</span>/300</span>
+          </div>
+        </div>
+
+        <!-- ── What You're Looking For ── -->
+        <div class="form-section">
+          <h3 class="section-title">🔍 What You're Looking For</h3>
+
+          <div class="form-group">
+            <label>Gender Housing Considering <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
+            <div class="checkbox-group" id="wanted-genders-wrap"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Buildings You'd Consider <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
+            <div class="checkbox-toolbar">
+              <button type="button" id="select-all-buildings" class="btn btn-ghost btn-xs">Select All</button>
+              <button type="button" id="clear-all-buildings" class="btn btn-ghost btn-xs">Clear All</button>
+            </div>
+            <div class="checkbox-group checkbox-scroll" id="wanted-buildings-wrap"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Occupancies You'd Consider <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
+            <div class="checkbox-group" id="wanted-occupancies-wrap"></div>
+          </div>
+        </div>
+
+        <!-- ── Contact Info ── -->
+        <div class="form-section">
+          <h3 class="section-title">
+            📬 Contact Info
+            <span class="contact-note">Only visible to other swappers who have a listing</span>
+          </h3>
+          <p class="field-hint">Your BU email is included automatically. Add at least one more way to reach you.</p>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label for="f-reddit">Reddit Username</label>
+              <input type="text" id="f-reddit" placeholder="u/yourname" />
+            </div>
+            <div class="form-group">
+              <label for="f-phone">Phone Number</label>
+              <input type="tel" id="f-phone" placeholder="617-555-0123" />
+            </div>
+            <div class="form-group">
+              <label for="f-other">Other</label>
+              <input type="text" id="f-other" placeholder="Instagram, Discord, Snapchat..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">Submit Listing</button>
+          <button type="button" id="delete-listing-btn" class="btn btn-danger btn-lg hidden">Remove My Listing</button>
+        </div>
+
+        <div id="form-error" class="msg msg-error hidden" style="margin-top:14px"></div>
+        <div id="form-success" class="msg msg-success hidden" style="margin-top:14px"></div>
+      </form>
+    </div>
+  </div>
+
+</div><!-- /view-app -->
+</main>
+
+<footer class="site-footer">
+  BU Direct Swap Connections &nbsp;•&nbsp; For BU students only &nbsp;•&nbsp; Contact info protected 🔒
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

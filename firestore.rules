@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Listings (public info) ──────────────────────────────
+    // Any signed-in user can read.
+    // Only the owner can write, and only with a @bu.edu email.
+    match /listings/{userId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.auth.token.email.matches(".*@bu\\.edu")
+                    && request.resource.data.email == request.auth.token.email;
+
+      allow update, delete: if request.auth != null
+                            && request.auth.uid == userId;
+    }
+
+    // ── Contacts (private info) ─────────────────────────────
+    // Only readable by users who have submitted their own listing.
+    // This is what keeps contact info locked behind participation.
+    match /contacts/{userId} {
+      allow read: if request.auth != null
+                  && exists(/databases/$(database)/documents/listings/$(request.auth.uid));
+
+      allow write: if request.auth != null
+                   && request.auth.uid == userId;
+    }
+  }
+}
