@@ -1,7 +1,6 @@
-// ═══════════════════════════════════════════════════════════════
-//  STEP 1 ── Paste your Firebase config here
-//  Firebase Console → Project Settings → Your apps → Web app
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  Firebase Config — already set from earlier
+// ══════════════════════════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyAo8yMTgXG5itJnbWsIl8WW_YGzK_xF_ZI",
   authDomain: "bu-direct-swap.firebaseapp.com",
@@ -66,27 +65,24 @@ const OCCUPANCIES = [
 const GENDERS = ["Men's", "Women's", "Gender Inclusive"];
 
 // ── State ──────────────────────────────────────────────────────
-let currentUser  = null;
-let hasListing   = false;
-let allListings  = [];
-let contactsMap  = {};
+let currentUser   = null;
+let hasListing    = false;
+let allListings   = [];
+let contactsMap   = {};
 let unsubListings = null;
 
 // ── DOM Helpers ────────────────────────────────────────────────
-const el       = (id) => document.getElementById(id);
-const show     = (e) => e && e.classList.remove("hidden");
-const hide     = (e) => e && e.classList.add("hidden");
+const el         = (id) => document.getElementById(id);
+const show       = (e)  => e && e.classList.remove("hidden");
+const hide       = (e)  => e && e.classList.add("hidden");
 const getChecked = (name) =>
   [...document.querySelectorAll(`[name="${name}"]:checked`)].map((cb) => cb.value);
 
 function esc(str) {
   return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-
 function showErr(id, msg) { const e = el(id); if (e) { e.textContent = msg; show(e); } }
 function clearErr(id)     { const e = el(id); if (e) { e.textContent = "";  hide(e); } }
 function showMsg(id, msg) { const e = el(id); if (e) { e.innerHTML  = msg; show(e); } }
@@ -103,8 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = user;
       el("header-email").textContent = user.email;
       show(el("header-user"));
-            show(el("header-nav"));       // ← ADD
-      hide(el("hero-section"));     // ← ADD
+      hide(el("hero-section"));
       hide(el("view-signin"));
       show(el("view-app"));
       await loadUserState();
@@ -115,12 +110,10 @@ document.addEventListener("DOMContentLoaded", () => {
       allListings  = [];
       contactsMap  = {};
       if (unsubListings) { unsubListings(); unsubListings = null; }
-        hide(el("view-app"));
+      hide(el("view-app"));
       show(el("view-signin"));
       hide(el("header-user"));
-      hide(el("header-nav"));       // ← ADD
-      show(el("hero-section"));     // ← ADD
-      // Reset sign-in form
+      show(el("hero-section"));
       show(el("signin-form-inner"));
       hide(el("signin-sent"));
       resetSignInBtn();
@@ -135,9 +128,9 @@ function populateOptions() {
   appendOpts("f-building",       BUILDINGS);
   appendOpts("f-occupancy",      OCCUPANCIES);
 
-  appendCBs("wanted-genders-wrap",    "wanted-gender",    GENDERS);
-  appendCBs("wanted-buildings-wrap",  "wanted-building",  BUILDINGS);
-  appendCBs("wanted-occupancies-wrap","wanted-occupancy", OCCUPANCIES);
+  appendCBs("wanted-genders-wrap",     "wanted-gender",    GENDERS);
+  appendCBs("wanted-buildings-wrap",   "wanted-building",  BUILDINGS);
+  appendCBs("wanted-occupancies-wrap", "wanted-occupancy", OCCUPANCIES);
 }
 
 function appendOpts(selectId, items) {
@@ -163,41 +156,34 @@ function appendCBs(wrapperId, name, items) {
 
 // ── Event Bindings ─────────────────────────────────────────────
 function bindEvents() {
-  // Auth
   el("send-link-btn").addEventListener("click", sendLink);
   el("email-input").addEventListener("keydown", (e) => e.key === "Enter" && sendLink());
-  el("signout-btn").addEventListener("click", () => signOut(auth));
+  el("signout-btn").addEventListener("click",   () => signOut(auth));
 
-  // Tabs
   document.querySelectorAll("[data-tab]").forEach((btn) =>
     btn.addEventListener("click", () => switchTab(btn.dataset.tab))
   );
 
-  // Jump from banner to form
-  el("go-to-my-listing").addEventListener("click", () => switchTab("my-listing"));
+  el("go-to-my-listing")?.addEventListener("click", () => switchTab("my-listing"));
+  el("go-to-form-btn")?.addEventListener("click",   () => switchTab("my-listing"));
 
-  // Filters
   ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
     .forEach((id) => el(id)?.addEventListener("change", renderListings));
-  el("clear-filters").addEventListener("click", clearFilters);
+  el("filter-search")?.addEventListener("input",  renderListings);
+  el("clear-filters")?.addEventListener("click",  clearFilters);
 
-  // Form
-  el("listing-form").addEventListener("submit", submitListing);
+  el("listing-form").addEventListener("submit",     submitListing);
   el("delete-listing-btn").addEventListener("click", deleteListing);
 
-  // Building select-all / clear-all
-  el("select-all-buildings").addEventListener("click", () =>
+  el("select-all-buildings")?.addEventListener("click", () =>
     document.querySelectorAll("[name='wanted-building']").forEach((cb) => (cb.checked = true))
   );
-  el("clear-all-buildings").addEventListener("click", () =>
+  el("clear-all-buildings")?.addEventListener("click", () =>
     document.querySelectorAll("[name='wanted-building']").forEach((cb) => (cb.checked = false))
   );
 
-  // Char counters
   el("f-pitch").addEventListener("input",   () => el("pitch-count").textContent   = el("f-pitch").value.length);
   el("f-details").addEventListener("input", () => el("details-count").textContent = el("f-details").value.length);
-    el("nav-submit-btn")?.addEventListener("click", () => switchTab("my-listing"));
-  el("nav-browse-btn")?.addEventListener("click", () => switchTab("browse"));
 }
 
 // ── Tab Switching ──────────────────────────────────────────────
@@ -210,14 +196,18 @@ function switchTab(tab) {
   );
 }
 
+// Table header sort (needs window scope for inline onclick)
+window.setSort = function(val) {
+  const sel = el("filter-sort");
+  if (sel) { sel.value = val; renderListings(); }
+};
+
 // ── Auth: Email Link ───────────────────────────────────────────
 function handleEmailReturn() {
   if (!isSignInWithEmailLink(auth, window.location.href)) return;
-
   let email = localStorage.getItem("buSwapEmail");
   if (!email) email = prompt("Please enter your BU email to finish signing in:");
   if (!email) return;
-
   signInWithEmailLink(auth, email, window.location.href)
     .then(() => {
       localStorage.removeItem("buSwapEmail");
@@ -232,13 +222,11 @@ function handleEmailReturn() {
 async function sendLink() {
   const email = el("email-input").value.trim().toLowerCase();
   clearErr("signin-error");
-
-  if (!email)                      return showErr("signin-error", "Enter your BU email.");
-  if (!email.endsWith("@bu.edu"))  return showErr("signin-error", "Only @bu.edu addresses are allowed.");
+  if (!email)                     return showErr("signin-error", "Enter your BU email.");
+  if (!email.endsWith("@bu.edu")) return showErr("signin-error", "Only @bu.edu addresses are allowed.");
 
   const btn = el("send-link-btn");
-  btn.disabled = true;
-  btn.textContent = "Sending…";
+  btn.disabled = true; btn.textContent = "Sending…";
 
   try {
     await sendSignInLinkToEmail(auth, email, {
@@ -274,12 +262,11 @@ async function loadUserState() {
     el("submit-btn").textContent      = "Update Listing";
     show(el("delete-listing-btn"));
   } else {
-    el("form-heading").textContent    = "Add My Listing";
-    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info.";
+    el("form-heading").textContent    = "Submit Your Swap Listing";
+    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info for other listings.";
     el("submit-btn").textContent      = "Submit Listing";
     hide(el("delete-listing-btn"));
   }
-
   updateBanner();
 }
 
@@ -287,14 +274,12 @@ function updateBanner() {
   hasListing ? hide(el("no-listing-banner")) : show(el("no-listing-banner"));
 }
 
-// ── Listings Listener (real-time) ──────────────────────────────
+// ── Listings Listener ──────────────────────────────────────────
 function startListingsListener() {
   if (unsubListings) unsubListings();
-
   const q = query(collection(db, "listings"), orderBy("submittedAt", "desc"));
   unsubListings = onSnapshot(q, async (snapshot) => {
     allListings = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-
     if (hasListing) {
       try {
         const cs = await getDocs(collection(db, "contacts"));
@@ -302,31 +287,41 @@ function startListingsListener() {
         cs.forEach((d) => { contactsMap[d.id] = d.data(); });
       } catch (_) { contactsMap = {}; }
     }
-
     renderListings();
   });
 }
 
-// ── Render Listings ────────────────────────────────────────────
+// ── Render Table ───────────────────────────────────────────────
 function renderListings() {
-  const container = el("listings-container");
-  if (!container) return;
+  const tbody = el("listings-tbody");
+  if (!tbody) return;
 
-  const fGender   = el("filter-gender").value;
-  const fBuilding = el("filter-building").value;
-  const fOccupancy= el("filter-occupancy").value;
-  const fRoommate = el("filter-roommate").value;
-  const fSort     = el("filter-sort").value;
+  const fGender    = el("filter-gender")?.value    || "";
+  const fBuilding  = el("filter-building")?.value  || "";
+  const fOccupancy = el("filter-occupancy")?.value || "";
+  const fRoommate  = el("filter-roommate")?.value  || "";
+  const fSort      = el("filter-sort")?.value      || "newest";
+  const fSearch    = (el("filter-search")?.value   || "").toLowerCase().trim();
 
-  // Filter out own listing
   let list = allListings.filter((l) => l.id !== currentUser?.uid);
 
   if (fGender)    list = list.filter((l) => l.housingGender   === fGender);
   if (fBuilding)  list = list.filter((l) => l.currentBuilding === fBuilding);
   if (fOccupancy) list = list.filter((l) => l.occupancy       === fOccupancy);
   if (fRoommate !== "") list = list.filter((l) => String(l.bringingRoommate) === fRoommate);
+  if (fSearch) {
+    list = list.filter((l) => {
+      const blob = [
+        l.currentBuilding, l.housingGender, l.occupancy,
+        l.pitch, l.otherDetails,
+        ...(l.wantedBuildings    || []),
+        ...(l.wantedGenders      || []),
+        ...(l.wantedOccupancies  || []),
+      ].join(" ").toLowerCase();
+      return blob.includes(fSearch);
+    });
+  }
 
-  // Sort (allListings is already newest-first from Firestore)
   if (fSort === "oldest") {
     list = [...list].reverse();
   } else if (fSort === "building") {
@@ -335,90 +330,88 @@ function renderListings() {
     );
   }
 
+  const countEl = el("listings-count");
+  if (countEl) countEl.textContent = `${list.length} listing${list.length !== 1 ? "s" : ""}`;
+
   if (list.length === 0) {
-    const filtered = fGender || fBuilding || fOccupancy || fRoommate !== "";
-    container.innerHTML = `
-      <div class="empty-state">
-        <p>${filtered ? "No listings match these filters." : "No listings yet — be the first! 🏠"}</p>
-      </div>`;
+    const filtered = fGender || fBuilding || fOccupancy || fRoommate !== "" || fSearch;
+    tbody.innerHTML = `
+      <tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">🏠</div>
+          <p>${filtered ? "No listings match your filters." : "No listings yet — be the first!"}</p>
+        </div>
+      </td></tr>`;
     return;
   }
 
-  container.innerHTML = list.map(renderCard).join("");
+  tbody.innerHTML = list.map(renderRow).join("");
 }
 
-function renderCard(listing) {
+function renderRow(listing) {
   const date = listing.submittedAt?.toDate
     ? listing.submittedAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "Recently";
 
-  const wantedGenders    = (listing.wantedGenders    || []).join(", ") || "—";
-  const wantedBuildings  = (listing.wantedBuildings  || []).join(", ") || "—";
-  const wantedOccupancies= (listing.wantedOccupancies|| []).join(", ") || "—";
+  const wantedGenders     = (listing.wantedGenders     || []).join(", ") || "—";
+  const wantedBuildings   = (listing.wantedBuildings   || []).join(", ") || "—";
+  const wantedOccupancies = (listing.wantedOccupancies || []).join(", ") || "—";
 
   let contactHtml = "";
   if (!hasListing) {
-    contactHtml = `<div class="contact-locked">🔒 Submit your listing to unlock contact info</div>`;
+    contactHtml = `<span class="contact-locked-inline">🔒 Submit listing to unlock</span>`;
   } else {
     const c = contactsMap[listing.id] || {};
-    const rows = [];
-    if (listing.email)    rows.push(`Email: <strong>${esc(listing.email)}</strong>`);
-    if (c.redditUsername) rows.push(`Reddit: <strong>${esc(c.redditUsername)}</strong>`);
-    if (c.phone)          rows.push(`Phone: <strong>${esc(c.phone)}</strong>`);
-    if (c.otherContact)   rows.push(`Other: <strong>${esc(c.otherContact)}</strong>`);
-    contactHtml = `
-      <div class="contact-section">
-        <div class="contact-title">📬 Contact</div>
-        <div class="contact-items">${rows.join("<br>") || "(No contact info provided)"}</div>
-      </div>`;
+    const parts = [];
+    if (listing.email)    parts.push(`<a href="mailto:${esc(listing.email)}" class="contact-link">${esc(listing.email)}</a>`);
+    if (c.redditUsername) parts.push(`<small class="muted">${esc(c.redditUsername)}</small>`);
+    if (c.phone)          parts.push(`<small class="muted">${esc(c.phone)}</small>`);
+    if (c.otherContact)   parts.push(`<small class="muted">${esc(c.otherContact)}</small>`);
+    contactHtml = parts.join("<br>") || "(none provided)";
   }
 
-  return `
-    <div class="listing-card">
-      <div class="card-top">
-        <div class="card-badges">
-          <span class="badge badge-building">${esc(listing.currentBuilding)}</span>
-          <span class="badge badge-gender">${esc(listing.housingGender)}</span>
-          <span class="badge badge-occupancy">${esc(listing.occupancy)}</span>
-          ${listing.bringingRoommate ? `<span class="badge badge-roommate">+1 Roommate</span>` : ""}
-        </div>
-        <span class="card-date">${date}</span>
-      </div>
-
-      <div class="card-pitch"><p>${esc(listing.pitch)}</p></div>
-      ${listing.otherDetails ? `<p class="card-other-details">${esc(listing.otherDetails)}</p>` : ""}
-
-      <div class="card-looking-for">
-        <div class="looking-for-title">🔍 Looking for</div>
-        <div class="looking-for-grid">
-          <div><span class="lf-label">Gender:</span> ${esc(wantedGenders)}</div>
-          <div><span class="lf-label">Buildings:</span> ${esc(wantedBuildings)}</div>
-          <div><span class="lf-label">Occupancy:</span> ${esc(wantedOccupancies)}</div>
-        </div>
-      </div>
-
-      ${contactHtml}
-    </div>`;
+  return `<tr>
+    <td><span class="badge">${esc(listing.currentBuilding || "—")}</span></td>
+    <td class="muted">${esc(listing.housingGender || "—")}</td>
+    <td class="muted">
+      ${esc(listing.occupancy || "—")}
+      ${listing.bringingRoommate ? `<br><span class="badge gold">+Roommate</span>` : ""}
+    </td>
+    <td>
+      <div style="max-width:260px;line-height:1.5">${esc(listing.pitch || "—")}</div>
+      ${listing.otherDetails
+        ? `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-top:4px">${esc(listing.otherDetails)}</div>`
+        : ""}
+    </td>
+    <td class="muted" style="font-size:0.82rem;min-width:160px">
+      <div><strong>Gender:</strong> ${esc(wantedGenders)}</div>
+      <div><strong>Occ.:</strong> ${esc(wantedOccupancies)}</div>
+      <div><strong>Buildings:</strong> ${esc(wantedBuildings)}</div>
+    </td>
+    <td style="min-width:140px">${contactHtml}</td>
+    <td class="muted">${date}</td>
+  </tr>`;
 }
 
 function clearFilters() {
   ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
     .forEach((id) => { const e = el(id); if (e) e.value = id === "filter-sort" ? "newest" : ""; });
+  const s = el("filter-search"); if (s) s.value = "";
   renderListings();
 }
 
-// ── Form: Populate (edit mode) ─────────────────────────────────
+// ── Form: Populate ─────────────────────────────────────────────
 function populateForm(listing, contact) {
-  el("f-gender").value   = listing.housingGender  || "";
-  el("f-building").value = listing.currentBuilding || "";
-  el("f-occupancy").value= listing.occupancy      || "";
+  el("f-gender").value    = listing.housingGender   || "";
+  el("f-building").value  = listing.currentBuilding || "";
+  el("f-occupancy").value = listing.occupancy       || "";
 
   document.querySelectorAll("[name='f-roommate']").forEach((r) => {
     r.checked = r.value === String(listing.bringingRoommate);
   });
 
-  el("f-pitch").value   = listing.pitch       || "";
-  el("pitch-count").textContent = (listing.pitch || "").length;
+  el("f-pitch").value   = listing.pitch        || "";
+  el("pitch-count").textContent   = (listing.pitch || "").length;
   el("f-details").value = listing.otherDetails || "";
   el("details-count").textContent = (listing.otherDetails || "").length;
 
@@ -443,37 +436,34 @@ async function submitListing(e) {
   clearErr("form-error");
   clearMsg("form-success");
 
-  // Collect
-  const housingGender   = el("f-gender").value;
-  const currentBuilding = el("f-building").value;
-  const occupancy       = el("f-occupancy").value;
-  const roommateEl      = document.querySelector("[name='f-roommate']:checked");
-  const pitch           = el("f-pitch").value.trim();
-  const otherDetails    = el("f-details").value.trim();
-  const wantedGenders   = getChecked("wanted-gender");
-  const wantedBuildings = getChecked("wanted-building");
+  const housingGender     = el("f-gender").value;
+  const currentBuilding   = el("f-building").value;
+  const occupancy         = el("f-occupancy").value;
+  const roommateEl        = document.querySelector("[name='f-roommate']:checked");
+  const pitch             = el("f-pitch").value.trim();
+  const otherDetails      = el("f-details").value.trim();
+  const wantedGenders     = getChecked("wanted-gender");
+  const wantedBuildings   = getChecked("wanted-building");
   const wantedOccupancies = getChecked("wanted-occupancy");
   const reddit = el("f-reddit").value.trim();
   const phone  = el("f-phone").value.trim();
   const other  = el("f-other").value.trim();
 
-  // Validate
-  if (!housingGender)         return showErr("form-error", "Select your housing assignment gender.");
-  if (!currentBuilding)       return showErr("form-error", "Select your current building.");
-  if (!occupancy)             return showErr("form-error", "Select your room occupancy.");
-  if (!roommateEl)            return showErr("form-error", "Indicate whether you're bringing a roommate.");
-  if (!pitch)                 return showErr("form-error", "Add a pitch for your room.");
-  if (!wantedGenders.length)  return showErr("form-error", "Select at least one gender housing preference.");
-  if (!wantedBuildings.length)return showErr("form-error", "Select at least one building you would consider.");
-  if (!wantedOccupancies.length) return showErr("form-error", "Select at least one occupancy you would consider.");
-  if (!reddit && !phone && !other) return showErr("form-error", "Add at least one contact method (Reddit, phone, or other).");
+  if (!housingGender)           return showErr("form-error", "Select your housing assignment gender.");
+  if (!currentBuilding)         return showErr("form-error", "Select your current building.");
+  if (!occupancy)               return showErr("form-error", "Select your room occupancy.");
+  if (!roommateEl)              return showErr("form-error", "Indicate whether you're bringing a roommate.");
+  if (!pitch)                   return showErr("form-error", "Add a pitch for your room.");
+  if (!wantedGenders.length)    return showErr("form-error", "Select at least one gender housing preference.");
+  if (!wantedBuildings.length)  return showErr("form-error", "Select at least one building you'd consider.");
+  if (!wantedOccupancies.length) return showErr("form-error", "Select at least one occupancy you'd consider.");
+  if (!reddit && !phone && !other) return showErr("form-error", "Add at least one contact method.");
 
   const btn = el("submit-btn");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  btn.disabled = true; btn.textContent = "Saving…";
 
   try {
-    const isNew = !hasListing;
+    const isNew      = !hasListing;
     const listingRef = doc(db, "listings", currentUser.uid);
     const contactRef = doc(db, "contacts",  currentUser.uid);
 
@@ -494,15 +484,13 @@ async function submitListing(e) {
     }
 
     await setDoc(contactRef, {
-      redditUsername: reddit,
-      phone, otherContact: other,
+      redditUsername: reddit, phone, otherContact: other,
       updatedAt: serverTimestamp(),
     });
 
     hasListing = true;
     updateBanner();
 
-    // Reload contacts so browse view updates immediately
     try {
       const cs = await getDocs(collection(db, "contacts"));
       contactsMap = {};
@@ -549,7 +537,6 @@ async function deleteListing() {
     updateBanner();
     renderListings();
 
-    // Reset form
     el("listing-form").reset();
     document.querySelectorAll(
       "#listing-form input[type='checkbox'], #listing-form input[type='radio']"
@@ -557,8 +544,8 @@ async function deleteListing() {
     el("pitch-count").textContent   = "0";
     el("details-count").textContent = "0";
 
-    el("form-heading").textContent    = "Add My Listing";
-    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info.";
+    el("form-heading").textContent    = "Submit Your Swap Listing";
+    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info for other listings.";
     el("submit-btn").textContent      = "Submit Listing";
     hide(el("delete-listing-btn"));
 

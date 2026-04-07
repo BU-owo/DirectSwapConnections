@@ -3,66 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BU Direct Swap Connections</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Direct Swap Connections — BU Housing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- ═══ HEADER ═══════════════════════════════════════════════ -->
-<header class="site-header">
-  <div class="header-inner">
-    <div class="logo">
-      <span class="logo-main">Direct Swap</span>
-      <span class="logo-gold">Connections</span>
-    </div>
-    <div class="header-actions">
-      <div id="header-user" class="header-user hidden">
-        <span id="header-email" class="header-email-text"></span>
-        <button id="signout-btn" class="btn btn-ghost-sm">Sign Out</button>
-      </div>
-      <div id="header-nav" class="header-nav hidden">
-        <button id="nav-submit-btn" class="btn btn-dark btn-sm">Submit Swap</button>
-        <button id="nav-browse-btn" class="btn-text-link">View Listings</button>
-      </div>
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">Direct Swap <span>Connections</span></div>
+  <div class="nav-right">
+    <div id="header-user" class="header-user hidden">
+      <span id="header-email" class="header-email"></span>
+      <button id="signout-btn" class="nav-signout">Sign Out</button>
     </div>
   </div>
-</header>
+</nav>
 
-<!-- ═══ HERO (sign-out state only) ═══════════════════════════ -->
-<section id="hero-section" class="hero">
-  <div class="hero-inner">
-    <h1 class="hero-title">
-      <span>BU Housing</span>
-      <em>Direct Swaps</em>
-    </h1>
-    <p class="hero-sub">
-      Find your perfect room swap. Submit your listing, browse others,<br class="hero-br">
-      and connect with fellow Terriers.
-    </p>
-    <div class="hero-pill">
-      <span class="pill-dot"></span>
-      BU students only — @bu.edu verified
-    </div>
-  </div>
-</section>
+<!-- HERO (hidden after sign-in) -->
+<div id="hero-section" class="hero">
+  <h1>BU Housing<br><em>Direct Swaps</em></h1>
+  <p>Find your perfect room swap. Submit your listing, browse others, and connect with fellow Terriers.</p>
+  <div class="hero-badge"><span class="dot"></span> BU students only — @bu.edu verified</div>
+</div>
 
-<main class="main-content">
+<main>
 
-<!-- ═══ VIEW: SIGN IN ════════════════════════════════════════ -->
+<!-- ═══ SIGN IN VIEW ═══════════════════════════════════════════ -->
 <div id="view-signin" class="view-signin">
-  <div class="signin-card">
-    <h2>Sign In to Get Started</h2>
-    <p class="signin-subtitle">Enter your BU email and we'll send you a magic link — no password needed.</p>
+  <div class="card signin-card">
+    <div class="card-title">Sign In to Get Started</div>
+    <div class="card-sub">Enter your BU email and we'll send you a magic link — no password needed.</div>
 
     <div id="signin-form-inner">
-      <div class="form-group">
-        <label for="email-input">BU Email Address</label>
+      <div class="field">
+        <label>BU Email Address</label>
         <input id="email-input" type="email" placeholder="terrier@bu.edu" autocomplete="email" />
       </div>
-      <button id="send-link-btn" class="btn btn-primary btn-full">Send Sign-In Link</button>
-      <p class="signin-note">A magic link will be emailed to you. No password needed.</p>
+      <button id="send-link-btn" class="btn-primary" style="margin-top:1rem;">Send Sign-In Link</button>
+      <p class="note">A magic link will be emailed to you. No password needed.</p>
       <div id="signin-error" class="msg msg-error hidden"></div>
     </div>
 
@@ -70,109 +50,121 @@
       <div class="msg msg-success">
         <strong>📬 Check your inbox!</strong><br>
         We sent a sign-in link to <strong><span id="sent-email-display"></span></strong>.<br>
-        Click the link to continue.
+        Click the link in the email to continue.
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ VIEW: APP ════════════════════════════════════════════ -->
-<div id="view-app" class="view-app hidden">
+<!-- ═══ APP VIEW ════════════════════════════════════════════════ -->
+<div id="view-app" class="hidden">
 
-  <div class="tab-nav">
-    <button class="tab-btn active" data-tab="browse">🔍 Browse Listings</button>
-    <button class="tab-btn" data-tab="my-listing">📝 My Listing</button>
+  <!-- Tab Nav -->
+  <div class="page-tabs">
+    <button class="page-tab active" data-tab="browse">🔍 View Listings</button>
+    <button class="page-tab" data-tab="my-listing">📝 My Listing</button>
   </div>
 
-  <!-- ─── TAB: BROWSE ──────────────────────────────────────── -->
+  <!-- ── BROWSE TAB ─────────────────────────────────────────── -->
   <div class="tab-panel" data-panel="browse">
 
-    <div id="no-listing-banner" class="banner banner-warning hidden">
-      <span>⚠️ <strong>Submit your own listing to unlock contact info.</strong></span>
-      <button id="go-to-my-listing" class="btn btn-sm btn-primary">Add My Listing →</button>
+    <div id="no-listing-banner" class="notice-banner hidden">
+      ⚠️ <strong>Submit your own listing to unlock contact info.</strong>
+      <button id="go-to-my-listing" class="btn-inline">Add My Listing →</button>
     </div>
 
-    <div class="filter-bar">
-      <div class="filter-bar-inner">
-        <div class="filter-group">
-          <label>Gender Housing</label>
-          <select id="filter-gender">
-            <option value="">Any</option>
-            <option>Men's</option>
-            <option>Women's</option>
-            <option>Gender Inclusive</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Building</label>
-          <select id="filter-building"><option value="">Any</option></select>
-        </div>
-        <div class="filter-group">
-          <label>Occupancy</label>
-          <select id="filter-occupancy"><option value="">Any</option></select>
-        </div>
-        <div class="filter-group">
-          <label>Bringing Roommate</label>
-          <select id="filter-roommate">
-            <option value="">Any</option>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Sort By</label>
-          <select id="filter-sort">
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="building">Building (A–Z)</option>
-          </select>
-        </div>
-        <button id="clear-filters" class="btn btn-ghost btn-sm filter-clear">Clear</button>
+    <div class="listings-header">
+      <div>
+        <div class="listings-title">Active Swap Listings</div>
+        <div class="listings-count" id="listings-count">Loading…</div>
       </div>
+      <button id="go-to-form-btn" class="btn-primary" style="width:auto;margin:0;padding:10px 22px;">+ My Listing</button>
     </div>
 
-    <div id="listings-container" class="listings-grid">
-      <div class="empty-state"><p>Loading listings…</p></div>
+    <!-- Filters -->
+    <div class="filter-bar">
+      <label>Filter:</label>
+      <input id="filter-search" class="search-input" type="text" placeholder="Search building, pitch…" />
+      <select id="filter-gender">
+        <option value="">All genders</option>
+        <option>Men's</option>
+        <option>Women's</option>
+        <option>Gender Inclusive</option>
+      </select>
+      <select id="filter-building"><option value="">All buildings</option></select>
+      <select id="filter-occupancy"><option value="">All occupancies</option></select>
+      <select id="filter-roommate">
+        <option value="">Roommate: any</option>
+        <option value="true">Bringing roommate</option>
+        <option value="false">Not bringing roommate</option>
+      </select>
+      <label style="margin-left:4px;">Sort:</label>
+      <select id="filter-sort">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="building">Building A–Z</option>
+      </select>
+      <button id="clear-filters" class="btn-ghost-sm">Clear</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="setSort('building')">Building <span class="sort-icon">↕</span></th>
+            <th>Gender</th>
+            <th>Occupancy</th>
+            <th>Their Pitch</th>
+            <th>Looking For</th>
+            <th>Contact</th>
+            <th onclick="setSort('newest')">Posted <span class="sort-icon">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="listings-tbody">
+          <tr><td colspan="7" class="loading">Loading listings…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- ─── TAB: MY LISTING ──────────────────────────────────── -->
+  <!-- ── MY LISTING TAB ─────────────────────────────────────── -->
   <div class="tab-panel hidden" data-panel="my-listing">
-    <div class="form-card">
-      <h2 id="form-heading">Submit Your Swap Listing</h2>
-      <p class="form-subtitle" id="form-subheading">Fill this out to appear in the swap database and unlock contact info for other listings.</p>
+    <div class="card form-card">
+      <div class="card-title" id="form-heading">Submit Your Swap Listing</div>
+      <div class="card-sub" id="form-subheading">Fill this out to appear in the swap database and unlock contact info for other listings.</div>
 
       <form id="listing-form" novalidate>
 
-        <div class="form-section">
-          <h3 class="section-title">📍 Your Current Housing</h3>
+        <!-- Current Housing -->
+        <div class="form-section-label">📍 Your Current Housing</div>
+        <div class="form-grid">
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label for="f-gender">Housing Assignment Gender <span class="req">*</span></label>
-              <select id="f-gender" required>
-                <option value="">Select...</option>
-                <option>Men's</option>
-                <option>Women's</option>
-                <option>Gender Inclusive</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="f-building">Current Building <span class="req">*</span></label>
-              <select id="f-building" required>
-                <option value="">Select your building...</option>
-              </select>
-            </div>
+          <div class="field">
+            <label>Housing Assignment Gender <span class="req">*</span></label>
+            <select id="f-gender" required>
+              <option value="">Select...</option>
+              <option>Men's</option>
+              <option>Women's</option>
+              <option>Gender Inclusive</option>
+            </select>
           </div>
 
-          <div class="form-group form-group-half">
-            <label for="f-occupancy">Room Occupancy <span class="req">*</span></label>
+          <div class="field">
+            <label>Current Building <span class="req">*</span></label>
+            <select id="f-building" required>
+              <option value="">Select building...</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Room Occupancy <span class="req">*</span></label>
             <select id="f-occupancy" required>
               <option value="">Select...</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="field">
             <label>Bringing a Roommate? <span class="req">*</span></label>
             <div class="radio-group">
               <label class="radio-label"><input type="radio" name="f-roommate" value="true" required> Yes</label>
@@ -180,72 +172,70 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="f-pitch">
-              Pitch Your Room 🏠 <span class="req">*</span>
-              <span class="label-hint">Public — sell it!</span>
-            </label>
-            <p class="field-hint">What makes your room great? Think: kitchen, view, private bathroom, quiet area, female-only floor, close to campus, etc.</p>
-            <textarea id="f-pitch" rows="4" maxlength="500" placeholder="e.g. Private bathroom, great Charles River view, steps from the Green Line..." required></textarea>
+          <div class="field full">
+            <label>Pitch Your Room 🏠 <span class="req">*</span> <span class="label-hint">Public — sell it!</span></label>
+            <p class="field-hint">What makes your room great? Kitchen, view, private bath, quiet area, female-only floor, close to campus, etc.</p>
+            <textarea id="f-pitch" rows="3" maxlength="500" placeholder="e.g. Private bathroom, great Charles River view, steps from the Green Line..." required></textarea>
             <span class="char-counter"><span id="pitch-count">0</span>/500</span>
           </div>
 
-          <div class="form-group">
-            <label for="f-details">Other Important Details <span class="label-hint">Optional</span></label>
-            <textarea id="f-details" rows="3" maxlength="300" placeholder="Anything else worth knowing..."></textarea>
+          <div class="field full">
+            <label>Other Important Details <span class="label-hint">Optional</span></label>
+            <textarea id="f-details" rows="2" maxlength="300" placeholder="Anything else worth knowing about your assignment..."></textarea>
             <span class="char-counter"><span id="details-count">0</span>/300</span>
           </div>
+
         </div>
 
-        <div class="form-section">
-          <h3 class="section-title">🔍 What You're Looking For</h3>
+        <!-- What You're Looking For -->
+        <div class="form-section-label">🔍 What You're Looking For</div>
+        <div class="form-grid">
 
-          <div class="form-group">
+          <div class="field">
             <label>Gender Housing <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
-            <div class="checkbox-group" id="wanted-genders-wrap"></div>
+            <div class="checkbox-inline" id="wanted-genders-wrap"></div>
           </div>
 
-          <div class="form-group">
-            <label>Buildings You'd Consider <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
+          <div class="field">
+            <label>Occupancies <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
+            <div class="checkbox-inline" id="wanted-occupancies-wrap"></div>
+          </div>
+
+          <div class="field full">
+            <label>Buildings You'd Consider <span class="req">*</span></label>
             <div class="checkbox-toolbar">
-              <button type="button" id="select-all-buildings" class="btn btn-ghost btn-xs">Select All</button>
-              <button type="button" id="clear-all-buildings" class="btn btn-ghost btn-xs">Clear All</button>
+              <button type="button" id="select-all-buildings" class="btn-ghost-sm">Select All</button>
+              <button type="button" id="clear-all-buildings" class="btn-ghost-sm">Clear</button>
             </div>
-            <div class="checkbox-group checkbox-scroll" id="wanted-buildings-wrap"></div>
+            <div class="checkbox-scroll" id="wanted-buildings-wrap"></div>
           </div>
 
-          <div class="form-group">
-            <label>Occupancies You'd Consider <span class="req">*</span> <span class="label-hint">Select all that apply</span></label>
-            <div class="checkbox-group" id="wanted-occupancies-wrap"></div>
-          </div>
         </div>
 
-        <div class="form-section">
-          <h3 class="section-title">
-            📬 Contact Info
-            <span class="contact-note">Only visible to other swappers who have a listing</span>
-          </h3>
-          <p class="field-hint">Your BU email is included automatically. Add at least one more way to reach you.</p>
-
-          <div class="form-row-3">
-            <div class="form-group">
-              <label for="f-reddit">Reddit Username</label>
-              <input type="text" id="f-reddit" placeholder="u/yourname" />
-            </div>
-            <div class="form-group">
-              <label for="f-phone">Phone Number</label>
-              <input type="tel" id="f-phone" placeholder="617-555-0123" />
-            </div>
-            <div class="form-group">
-              <label for="f-other">Other</label>
-              <input type="text" id="f-other" placeholder="Instagram, Discord, Snapchat..." />
-            </div>
+        <!-- Contact Info -->
+        <div class="form-section-label">
+          📬 Contact Info
+          <span class="label-hint">Only visible to other swappers who have submitted a listing</span>
+        </div>
+        <p class="field-hint">Your BU email is included automatically. Add at least one more way to reach you.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label>Reddit Username</label>
+            <input type="text" id="f-reddit" placeholder="u/yourname" />
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <input type="tel" id="f-phone" placeholder="617-555-0123" />
+          </div>
+          <div class="field full">
+            <label>Other <span class="label-hint">Instagram, Discord, Snapchat, etc.</span></label>
+            <input type="text" id="f-other" placeholder="e.g. @username on Instagram" />
           </div>
         </div>
 
         <div class="form-actions">
-          <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">Submit Listing</button>
-          <button type="button" id="delete-listing-btn" class="btn btn-danger btn-lg hidden">Remove My Listing</button>
+          <button type="submit" id="submit-btn" class="btn-primary" style="width:auto;padding:12px 32px;">Submit Listing</button>
+          <button type="button" id="delete-listing-btn" class="btn-danger hidden" style="padding:12px 32px;">Remove My Listing</button>
         </div>
 
         <div id="form-error"   class="msg msg-error   hidden" style="margin-top:14px"></div>
