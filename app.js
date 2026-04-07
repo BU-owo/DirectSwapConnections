@@ -3,12 +3,13 @@
 //  Firebase Console → Project Settings → Your apps → Web app
 // ═══════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyAo8yMTgXG5itJnbWsIl8WW_YGzK_xF_ZI",
+  authDomain: "bu-direct-swap.firebaseapp.com",
+  projectId: "bu-direct-swap",
+  storageBucket: "bu-direct-swap.firebasestorage.app",
+  messagingSenderId: "353680083539",
+  appId: "1:353680083539:web:ab313dc71b39a7c74bd4a6",
+  measurementId: "G-CZ1EQX1HS1"
 };
 
 // ── Firebase Imports ───────────────────────────────────────────
