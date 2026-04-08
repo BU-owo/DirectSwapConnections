@@ -497,6 +497,9 @@ function resetForm() {
 
 // ── Form Submit ────────────────────────────────────────────────
 async function handleSubmit(e) {
+  if (!currentUser) {
+  return setErr("form-error", "Please sign in with your BU email first.");
+}
   e.preventDefault();
   setErr("form-error", "");
   setMsg("submit-success", "");
