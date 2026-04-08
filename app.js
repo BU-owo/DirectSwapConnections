@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  Firebase Config — already set from earlier
+//  Firebase Config
 // ══════════════════════════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyAo8yMTgXG5itJnbWsIl8WW_YGzK_xF_ZI",
@@ -88,35 +88,60 @@ function clearErr(id)     { const e = el(id); if (e) { e.textContent = "";  hide
 function showMsg(id, msg) { const e = el(id); if (e) { e.innerHTML  = msg; show(e); } }
 function clearMsg(id)     { const e = el(id); if (e) { e.innerHTML  = "";  hide(e); } }
 
+// ── Sign-in Modal ──────────────────────────────────────────────
+function openSignInModal(reason = "Sign in with your BU email to continue.") {
+  el("signin-modal-reason").textContent = reason;
+  clearErr("signin-error");
+  // Reset modal state
+  show(el("signin-form-inner"));
+  hide(el("signin-sent"));
+  resetSignInBtn();
+  show(el("signin-overlay"));
+  setTimeout(() => el("email-input")?.focus(), 100);
+}
+
+function closeSignInModal() {
+  hide(el("signin-overlay"));
+}
+
 // ── Bootstrap ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   populateOptions();
   bindEvents();
   handleEmailReturn();
 
+  // Always show the app immediately (anonymous browsing allowed)
+  show(el("view-app"));
+  startPublicListingsListener();
+
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
       el("header-email").textContent = user.email;
       show(el("header-user"));
+      hide(el("header-guest"));
       hide(el("hero-section"));
-      hide(el("view-signin"));
-      show(el("view-app"));
+      closeSignInModal();
+
+      // Show signed-in note on form
+      const noteEl = el("form-signedin-note");
+      const emailEl = el("form-signedin-email");
+      if (noteEl && emailEl) { emailEl.textContent = user.email; show(noteEl); }
+
       await loadUserState();
-      startListingsListener();
+      // Restart listener now that we're signed in (to get contacts too)
+      startPublicListingsListener();
     } else {
       currentUser  = null;
       hasListing   = false;
-      allListings  = [];
       contactsMap  = {};
-      if (unsubListings) { unsubListings(); unsubListings = null; }
-      hide(el("view-app"));
-      show(el("view-signin"));
+
       hide(el("header-user"));
-      show(el("hero-section"));
-      show(el("signin-form-inner"));
-      hide(el("signin-sent"));
-      resetSignInBtn();
+      show(el("header-guest"));
+      hide(el("form-signedin-note"));
+
+      updateBanner();
+      renderListings();
     }
   });
 });
@@ -156,9 +181,24 @@ function appendCBs(wrapperId, name, items) {
 
 // ── Event Bindings ─────────────────────────────────────────────
 function bindEvents() {
+  // Sign-in modal triggers
+  el("nav-signin-btn")?.addEventListener("click", () => openSignInModal());
+  el("hero-browse-btn")?.addEventListener("click", () => {
+    hide(el("hero-section"));
+    switchTab("browse");
+  });
+  el("hero-form-btn")?.addEventListener("click", () => {
+    hide(el("hero-section"));
+    switchTab("my-listing");
+  });
+  el("close-signin-modal")?.addEventListener("click", closeSignInModal);
+  el("signin-overlay")?.addEventListener("click", (e) => {
+    if (e.target === el("signin-overlay")) closeSignInModal();
+  });
+
   el("send-link-btn").addEventListener("click", sendLink);
   el("email-input").addEventListener("keydown", (e) => e.key === "Enter" && sendLink());
-  el("signout-btn").addEventListener("click",   () => signOut(auth));
+  el("signout-btn").addEventListener("click", () => signOut(auth));
 
   document.querySelectorAll("[data-tab]").forEach((btn) =>
     btn.addEventListener("click", () => switchTab(btn.dataset.tab))
@@ -215,7 +255,7 @@ function handleEmailReturn() {
     })
     .catch((err) => {
       console.error(err);
-      showErr("signin-error", "Sign-in link expired or already used — request a new one.");
+      openSignInModal("Sign-in link expired or already used — request a new one.");
     });
 }
 
@@ -228,18 +268,34 @@ async function sendLink() {
   const btn = el("send-link-btn");
   btn.disabled = true; btn.textContent = "Sending…";
 
+  // Use the current page URL as the redirect — make sure this domain is
+  // listed under Firebase Console → Authentication → Settings → Authorized domains
+  const actionCodeSettings = {
+    url: window.location.origin + window.location.pathname,
+    handleCodeInApp: true,
+  };
+
   try {
-    await sendSignInLinkToEmail(auth, email, {
-      url: window.location.origin + window.location.pathname,
-      handleCodeInApp: true,
-    });
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     localStorage.setItem("buSwapEmail", email);
     el("sent-email-display").textContent = email;
     hide(el("signin-form-inner"));
     show(el("signin-sent"));
   } catch (err) {
-    console.error(err);
-    showErr("signin-error", "Could not send link. Please try again.");
+    console.error("sendSignInLinkToEmail error:", err.code, err.message);
+
+    // Give a specific, useful error based on the Firebase error code
+    let msg = "Could not send link. ";
+    if (err.code === "auth/unauthorized-continue-uri") {
+      msg += `The domain "${window.location.hostname}" isn't authorized in Firebase. Add it under Authentication → Settings → Authorized domains.`;
+    } else if (err.code === "auth/invalid-continue-uri") {
+      msg += "The redirect URL is invalid.";
+    } else if (err.code === "auth/missing-android-pkg-name" || err.code === "auth/missing-ios-bundle-id") {
+      msg += "App configuration error.";
+    } else {
+      msg += `(${err.code}) Please try again or contact support.`;
+    }
+    showErr("signin-error", msg);
     resetSignInBtn();
   }
 }
@@ -271,22 +327,32 @@ async function loadUserState() {
 }
 
 function updateBanner() {
-  hasListing ? hide(el("no-listing-banner")) : show(el("no-listing-banner"));
+  // Show banner only for signed-in users without a listing
+  if (currentUser && !hasListing) {
+    show(el("no-listing-banner"));
+  } else {
+    hide(el("no-listing-banner"));
+  }
 }
 
 // ── Listings Listener ──────────────────────────────────────────
-function startListingsListener() {
+function startPublicListingsListener() {
   if (unsubListings) unsubListings();
   const q = query(collection(db, "listings"), orderBy("submittedAt", "desc"));
   unsubListings = onSnapshot(q, async (snapshot) => {
     allListings = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    if (hasListing) {
+
+    // Load contacts only if signed in AND has a listing
+    if (currentUser && hasListing) {
       try {
         const cs = await getDocs(collection(db, "contacts"));
         contactsMap = {};
         cs.forEach((d) => { contactsMap[d.id] = d.data(); });
       } catch (_) { contactsMap = {}; }
+    } else {
+      contactsMap = {};
     }
+
     renderListings();
   });
 }
@@ -303,7 +369,10 @@ function renderListings() {
   const fSort      = el("filter-sort")?.value      || "newest";
   const fSearch    = (el("filter-search")?.value   || "").toLowerCase().trim();
 
-  let list = allListings.filter((l) => l.id !== currentUser?.uid);
+  // Exclude the current user's own listing if signed in
+  let list = currentUser
+    ? allListings.filter((l) => l.id !== currentUser.uid)
+    : allListings;
 
   if (fGender)    list = list.filter((l) => l.housingGender   === fGender);
   if (fBuilding)  list = list.filter((l) => l.currentBuilding === fBuilding);
@@ -358,9 +427,18 @@ function renderRow(listing) {
   const wantedOccupancies = (listing.wantedOccupancies || []).join(", ") || "—";
 
   let contactHtml = "";
-  if (!hasListing) {
+
+  if (!currentUser) {
+    // Guest: not signed in at all
+    contactHtml = `
+      <span class="contact-locked-inline">🔒 Sign in to view</span><br>
+      <button class="contact-signin-btn" onclick="window._openSignIn()">Sign In →</button>
+    `;
+  } else if (!hasListing) {
+    // Signed in but no listing submitted
     contactHtml = `<span class="contact-locked-inline">🔒 Submit listing to unlock</span>`;
   } else {
+    // Signed in + has listing → show contacts
     const c = contactsMap[listing.id] || {};
     const parts = [];
     if (listing.email)    parts.push(`<a href="mailto:${esc(listing.email)}" class="contact-link">${esc(listing.email)}</a>`);
@@ -392,6 +470,9 @@ function renderRow(listing) {
     <td class="muted">${date}</td>
   </tr>`;
 }
+
+// Expose for inline onclick in table rows
+window._openSignIn = () => openSignInModal("Sign in with your BU email to view contact info.");
 
 function clearFilters() {
   ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
@@ -435,6 +516,12 @@ async function submitListing(e) {
   e.preventDefault();
   clearErr("form-error");
   clearMsg("form-success");
+
+  // If not signed in, prompt sign-in and stop
+  if (!currentUser) {
+    openSignInModal("Sign in with your BU email to submit your listing.");
+    return;
+  }
 
   const housingGender     = el("f-gender").value;
   const currentBuilding   = el("f-building").value;

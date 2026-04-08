@@ -18,23 +18,31 @@
       <span id="header-email" class="header-email"></span>
       <button id="signout-btn" class="nav-signout">Sign Out</button>
     </div>
+    <div id="header-guest" class="header-guest">
+      <button id="nav-signin-btn" class="nav-signout">Sign In</button>
+    </div>
   </div>
 </nav>
 
-<!-- HERO (hidden after sign-in) -->
+<!-- HERO -->
 <div id="hero-section" class="hero">
   <h1>BU Housing<br><em>Direct Swaps</em></h1>
-  <p>Find your perfect room swap. Submit your listing, browse others, and connect with fellow Terriers.</p>
-  <div class="hero-badge"><span class="dot"></span> BU students only — @bu.edu verified</div>
+  <p>Find your perfect room swap. Browse listings, submit yours, and connect with fellow Terriers.</p>
+  <div class="hero-actions">
+    <button id="hero-browse-btn" class="btn-hero-primary">🔍 Browse Listings</button>
+    <button id="hero-form-btn" class="btn-hero-secondary">📝 Submit My Listing</button>
+  </div>
+  <div class="hero-badge" style="margin-top:1.25rem;"><span class="dot"></span> BU students only — @bu.edu verified</div>
 </div>
 
 <main>
 
-<!-- ═══ SIGN IN VIEW ═══════════════════════════════════════════ -->
-<div id="view-signin" class="view-signin">
-  <div class="card signin-card">
-    <div class="card-title">Sign In to Get Started</div>
-    <div class="card-sub">Enter your BU email and we'll send you a magic link — no password needed.</div>
+<!-- ═══ SIGN IN MODAL OVERLAY ══════════════════════════════════ -->
+<div id="signin-overlay" class="modal-overlay hidden">
+  <div class="modal-card">
+    <button id="close-signin-modal" class="modal-close">✕</button>
+    <div class="card-title">Sign In with BU Email</div>
+    <div class="card-sub" id="signin-modal-reason">Enter your @bu.edu email — we'll send a magic link.</div>
 
     <div id="signin-form-inner">
       <div class="field">
@@ -42,7 +50,7 @@
         <input id="email-input" type="email" placeholder="terrier@bu.edu" autocomplete="email" />
       </div>
       <button id="send-link-btn" class="btn-primary" style="margin-top:1rem;">Send Sign-In Link</button>
-      <p class="note">A magic link will be emailed to you. No password needed.</p>
+      <p class="note">No password needed. Link expires in 1 hour.</p>
       <div id="signin-error" class="msg msg-error hidden"></div>
     </div>
 
@@ -56,8 +64,8 @@
   </div>
 </div>
 
-<!-- ═══ APP VIEW ════════════════════════════════════════════════ -->
-<div id="view-app" class="hidden">
+<!-- ═══ APP VIEW (always visible, content gated) ════════════════ -->
+<div id="view-app">
 
   <!-- Tab Nav -->
   <div class="page-tabs">
@@ -130,9 +138,26 @@
 
   <!-- ── MY LISTING TAB ─────────────────────────────────────── -->
   <div class="tab-panel hidden" data-panel="my-listing">
+
+    <!-- Guest: show form preview + sign-in prompt -->
+    <div id="guest-listing-prompt" class="hidden">
+      <div class="card form-card guest-prompt-card">
+        <div class="card-title">📝 Submit Your Swap Listing</div>
+        <div class="card-sub">Fill out the form below. You'll be asked to verify your BU email when you submit — contact info stays private until then.</div>
+        <!-- FULL FORM shown to guests too, sign-in triggered on submit -->
+      </div>
+    </div>
+
     <div class="card form-card">
       <div class="card-title" id="form-heading">Submit Your Swap Listing</div>
       <div class="card-sub" id="form-subheading">Fill this out to appear in the swap database and unlock contact info for other listings.</div>
+
+      <!-- Signed-in indicator -->
+      <div id="form-signedin-note" class="hidden" style="margin-bottom:1rem;">
+        <div class="msg msg-success" style="display:inline-flex;gap:6px;align-items:center;padding:8px 14px;">
+          ✅ Signed in as <strong id="form-signedin-email"></strong>
+        </div>
+      </div>
 
       <form id="listing-form" novalidate>
 
