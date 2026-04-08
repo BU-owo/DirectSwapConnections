@@ -2,30 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Listings (public info) ──────────────────────────────
-    // Any signed-in user can read.
-    // Only the owner can write, and only with a @bu.edu email.
-    match /listings/{userId} {
-      allow read: if request.auth != null;
+    // ── Listings ─────────────────────────────────────────────
+    // Public to read. Anyone with a @bu.edu email can create.
+    // Only the authenticated owner can update or delete.
+    match /listings/{docId} {
+      allow read: if true;
 
-      allow create: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.auth.token.email.matches(".*@bu\\.edu")
-                    && request.resource.data.email == request.auth.token.email;
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.matches(".*@bu\\.edu");
 
       allow update, delete: if request.auth != null
-                            && request.auth.uid == userId;
+                            && request.auth.token.email == resource.data.email;
     }
 
-    // ── Contacts (private info) ─────────────────────────────
-    // Only readable by users who have submitted their own listing.
-    // This is what keeps contact info locked behind participation.
-    match /contacts/{userId} {
-      allow read: if request.auth != null
-                  && exists(/databases/$(database)/documents/listings/$(request.auth.uid));
+    // ── Contacts ─────────────────────────────────────────────
+    // Only signed-in users can read.
+    // Anyone with a @bu.edu email can create (initial submission).
+    // Only the authenticated owner can update or delete.
+    match /contacts/{docId} {
+      allow read: if request.auth != null;
 
-      allow write: if request.auth != null
-                   && request.auth.uid == userId;
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.matches(".*@bu\\.edu");
+
+      allow update, delete: if request.auth != null
+                            && request.auth.token.email == resource.data.email;
     }
   }
 }

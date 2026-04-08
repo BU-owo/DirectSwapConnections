@@ -1,6 +1,4 @@
-// ══════════════════════════════════════════════════════════════
-//  Firebase Config
-// ══════════════════════════════════════════════════════════════
+// ── Firebase Config ────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyAo8yMTgXG5itJnbWsIl8WW_YGzK_xF_ZI",
   authDomain: "bu-direct-swap.firebaseapp.com",
@@ -11,26 +9,25 @@ const firebaseConfig = {
   measurementId: "G-CZ1EQX1HS1"
 };
 
-// ── Firebase Imports ───────────────────────────────────────────
-import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// ── Imports ────────────────────────────────────────────────────
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth, sendSignInLinkToEmail,
   isSignInWithEmailLink, signInWithEmailLink,
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc,
-  setDoc, updateDoc, getDoc, getDocs,
-  deleteDoc, query, orderBy, onSnapshot,
+  getFirestore, collection, doc, writeBatch,
+  getDoc, getDocs, query, orderBy, onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── Init ───────────────────────────────────────────────────────
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// ── Data ───────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────
 const BUILDINGS = [
   "Warren Towers",
   "West Campus – Claflin Hall",
@@ -47,22 +44,12 @@ const BUILDINGS = [
   "Fenway Campus",
   "Other / Off Campus",
 ];
-
 const OCCUPANCIES = [
-  "Single",
-  "Double",
-  "Triple",
-  "Quad",
-  "Single in Suite",
-  "Double in Suite",
-  "Triple in Suite",
-  "Studio",
-  "1-Bedroom Apartment",
-  "2-Bedroom Apartment",
-  "3+ Bedroom Apartment",
+  "Single","Double","Triple","Quad",
+  "Single in Suite","Double in Suite","Triple in Suite",
+  "Studio","1-Bedroom Apartment","2-Bedroom Apartment","3+ Bedroom Apartment",
 ];
-
-const GENDERS = ["Men's", "Women's", "Gender Inclusive"];
+const GENDERS = ["Men's","Women's","Gender Inclusive"];
 
 // ── State ──────────────────────────────────────────────────────
 let currentUser   = null;
@@ -71,294 +58,296 @@ let allListings   = [];
 let contactsMap   = {};
 let unsubListings = null;
 
-// ── DOM Helpers ────────────────────────────────────────────────
-const el         = (id) => document.getElementById(id);
-const show       = (e)  => e && e.classList.remove("hidden");
-const hide       = (e)  => e && e.classList.add("hidden");
+// ── Helpers ────────────────────────────────────────────────────
+const el   = (id) => document.getElementById(id);
+const show = (e)  => e?.classList.remove("hidden");
+const hide = (e)  => e?.classList.add("hidden");
 const getChecked = (name) =>
-  [...document.querySelectorAll(`[name="${name}"]:checked`)].map((cb) => cb.value);
+  [...document.querySelectorAll(`[name="${name}"]:checked`)].map(cb => cb.value);
 
-function esc(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function showErr(id, msg) { const e = el(id); if (e) { e.textContent = msg; show(e); } }
-function clearErr(id)     { const e = el(id); if (e) { e.textContent = "";  hide(e); } }
-function showMsg(id, msg) { const e = el(id); if (e) { e.innerHTML  = msg; show(e); } }
-function clearMsg(id)     { const e = el(id); if (e) { e.innerHTML  = "";  hide(e); } }
-
-// ── Sign-in Modal ──────────────────────────────────────────────
-function openSignInModal(reason = "Sign in with your BU email to continue.") {
-  el("signin-modal-reason").textContent = reason;
-  clearErr("signin-error");
-  // Reset modal state
-  show(el("signin-form-inner"));
-  hide(el("signin-sent"));
-  resetSignInBtn();
-  show(el("signin-overlay"));
-  setTimeout(() => el("email-input")?.focus(), 100);
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function closeSignInModal() {
-  hide(el("signin-overlay"));
+// "jsmith@bu.edu" → "jsmith-at-bu-dot-edu"
+function emailToDocId(email) {
+  return email.toLowerCase().replace(/@/g,"-at-").replace(/\./g,"-dot-");
+}
+
+function setErr(id, msg) {
+  const e = el(id);
+  if (!e) return;
+  e.textContent = msg;
+  msg ? show(e) : hide(e);
+}
+function setMsg(id, html) {
+  const e = el(id);
+  if (!e) return;
+  e.innerHTML = html;
+  html ? show(e) : hide(e);
 }
 
 // ── Bootstrap ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   populateOptions();
   bindEvents();
-  handleEmailReturn();
-
-  // Always show the app immediately (anonymous browsing allowed)
-  show(el("view-app"));
-  startPublicListingsListener();
+  handleEmailLink();
+  startListingsListener(); // listings are public — start immediately
 
   onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+
     if (user) {
-      currentUser = user;
-      el("header-email").textContent = user.email;
-      show(el("header-user"));
-      hide(el("header-guest"));
-      hide(el("hero-section"));
-      closeSignInModal();
-
-      // Show signed-in note on form
-      const noteEl = el("form-signedin-note");
-      const emailEl = el("form-signedin-email");
-      if (noteEl && emailEl) { emailEl.textContent = user.email; show(noteEl); }
-
-      await loadUserState();
-      // Restart listener now that we're signed in (to get contacts too)
-      startPublicListingsListener();
+      el("nav-email").textContent = user.email;
+      hide(el("auth-out"));
+      show(el("auth-in"));
+      hide(el("contact-banner"));
+      hide(el("edit-notice"));
+      await loadUserListing();
+      await refreshContacts();
+      renderTable();
     } else {
-      currentUser  = null;
-      hasListing   = false;
-      contactsMap  = {};
-
-      hide(el("header-user"));
-      show(el("header-guest"));
-      hide(el("form-signedin-note"));
-
-      updateBanner();
-      renderListings();
+      show(el("auth-out"));
+      hide(el("auth-in"));
+      show(el("contact-banner"));
+      show(el("edit-notice"));
+      hasListing  = false;
+      contactsMap = {};
+      resetForm();
+      renderTable();
     }
   });
 });
 
-// ── Populate Dropdowns & Checkboxes ───────────────────────────
+// ── Populate Dropdowns + Checkboxes ───────────────────────────
 function populateOptions() {
   appendOpts("filter-building",  BUILDINGS);
   appendOpts("filter-occupancy", OCCUPANCIES);
   appendOpts("f-building",       BUILDINGS);
   appendOpts("f-occupancy",      OCCUPANCIES);
-
   appendCBs("wanted-genders-wrap",     "wanted-gender",    GENDERS);
   appendCBs("wanted-buildings-wrap",   "wanted-building",  BUILDINGS);
   appendCBs("wanted-occupancies-wrap", "wanted-occupancy", OCCUPANCIES);
 }
-
-function appendOpts(selectId, items) {
-  const sel = el(selectId);
-  if (!sel) return;
-  items.forEach((item) => {
-    const opt = document.createElement("option");
-    opt.value = item; opt.textContent = item;
-    sel.appendChild(opt);
-  });
+function appendOpts(selId, items) {
+  const s = el(selId); if (!s) return;
+  items.forEach(v => { const o = document.createElement("option"); o.value = o.textContent = v; s.appendChild(o); });
 }
-
-function appendCBs(wrapperId, name, items) {
-  const wrap = el(wrapperId);
-  if (!wrap) return;
-  items.forEach((item) => {
-    const label = document.createElement("label");
-    label.className = "checkbox-label";
-    label.innerHTML = `<input type="checkbox" name="${name}" value="${esc(item)}" /> ${esc(item)}`;
-    wrap.appendChild(label);
+function appendCBs(wrapId, name, items) {
+  const w = el(wrapId); if (!w) return;
+  items.forEach(v => {
+    const lbl = document.createElement("label");
+    lbl.className = "check-label";
+    lbl.innerHTML = `<input type="checkbox" name="${name}" value="${esc(v)}" /> ${esc(v)}`;
+    w.appendChild(lbl);
   });
 }
 
 // ── Event Bindings ─────────────────────────────────────────────
 function bindEvents() {
-  // Sign-in modal triggers
-  el("nav-signin-btn")?.addEventListener("click", () => openSignInModal());
-  el("hero-browse-btn")?.addEventListener("click", () => {
-    hide(el("hero-section"));
-    switchTab("browse");
-  });
-  el("hero-form-btn")?.addEventListener("click", () => {
-    hide(el("hero-section"));
-    switchTab("my-listing");
-  });
-  el("close-signin-modal")?.addEventListener("click", closeSignInModal);
-  el("signin-overlay")?.addEventListener("click", (e) => {
-    if (e.target === el("signin-overlay")) closeSignInModal();
-  });
-
-  el("send-link-btn").addEventListener("click", sendLink);
-  el("email-input").addEventListener("keydown", (e) => e.key === "Enter" && sendLink());
-  el("signout-btn").addEventListener("click", () => signOut(auth));
-
-  document.querySelectorAll("[data-tab]").forEach((btn) =>
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab))
+  // Panel switching — every element with data-show
+  document.querySelectorAll("[data-show]").forEach(btn =>
+    btn.addEventListener("click", () => showPanel(btn.dataset.show))
   );
 
-  el("go-to-my-listing")?.addEventListener("click", () => switchTab("my-listing"));
-  el("go-to-form-btn")?.addEventListener("click",   () => switchTab("my-listing"));
+  // Modal open triggers
+  el("open-signin")?.addEventListener("click",      openModal);
+  el("banner-signin-btn")?.addEventListener("click", openModal);
+  el("edit-signin-btn")?.addEventListener("click",   openModal);
 
+  // Modal close
+  el("modal-close")?.addEventListener("click", closeModal);
+  el("signin-modal")?.addEventListener("click", (e) => {
+    if (e.target === el("signin-modal")) closeModal();
+  });
+
+  // Modal send link
+  el("modal-send-btn")?.addEventListener("click", sendMagicLink);
+  el("modal-email")?.addEventListener("keydown",  (e) => e.key === "Enter" && sendMagicLink());
+
+  // Sign out
+  el("signout-btn")?.addEventListener("click", () => signOut(auth));
+
+  // Filters
   ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
-    .forEach((id) => el(id)?.addEventListener("change", renderListings));
-  el("filter-search")?.addEventListener("input",  renderListings);
-  el("clear-filters")?.addEventListener("click",  clearFilters);
+    .forEach(id => el(id)?.addEventListener("change", renderTable));
+  el("filter-search")?.addEventListener("input", renderTable);
+  el("clear-filters")?.addEventListener("click", () => {
+    ["filter-gender","filter-building","filter-occupancy","filter-roommate"]
+      .forEach(id => { const e = el(id); if (e) e.value = ""; });
+    const s = el("filter-search"); if (s) s.value = "";
+    const so = el("filter-sort"); if (so) so.value = "newest";
+    renderTable();
+  });
 
-  el("listing-form").addEventListener("submit",     submitListing);
-  el("delete-listing-btn").addEventListener("click", deleteListing);
+  // Form
+  el("listing-form")?.addEventListener("submit", handleSubmit);
+  el("delete-btn")?.addEventListener("click",    handleDelete);
 
-  el("select-all-buildings")?.addEventListener("click", () =>
-    document.querySelectorAll("[name='wanted-building']").forEach((cb) => (cb.checked = true))
+  // Buildings select/clear all
+  el("sel-all-bldgs")?.addEventListener("click", () =>
+    document.querySelectorAll("[name='wanted-building']").forEach(cb => cb.checked = true)
   );
-  el("clear-all-buildings")?.addEventListener("click", () =>
-    document.querySelectorAll("[name='wanted-building']").forEach((cb) => (cb.checked = false))
+  el("clr-all-bldgs")?.addEventListener("click", () =>
+    document.querySelectorAll("[name='wanted-building']").forEach(cb => cb.checked = false)
   );
 
-  el("f-pitch").addEventListener("input",   () => el("pitch-count").textContent   = el("f-pitch").value.length);
-  el("f-details").addEventListener("input", () => el("details-count").textContent = el("f-details").value.length);
+  // Char counters
+  el("f-pitch")?.addEventListener("input",   () => el("pitch-count").textContent   = el("f-pitch").value.length);
+  el("f-details")?.addEventListener("input", () => el("details-count").textContent = el("f-details").value.length);
 }
 
-// ── Tab Switching ──────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll("[data-tab]").forEach((btn) =>
-    btn.classList.toggle("active", btn.dataset.tab === tab)
-  );
-  document.querySelectorAll("[data-panel]").forEach((panel) =>
-    panel.classList.toggle("hidden", panel.dataset.panel !== tab)
+// ── Panel Switching ────────────────────────────────────────────
+function showPanel(name) {
+  el("panel-browse")?.classList.toggle("hidden", name !== "browse");
+  el("panel-submit")?.classList.toggle("hidden", name !== "submit");
+  document.querySelectorAll(".nav-tab").forEach(t =>
+    t.classList.toggle("active", t.dataset.show === name)
   );
 }
 
-// Table header sort (needs window scope for inline onclick)
-window.setSort = function(val) {
-  const sel = el("filter-sort");
-  if (sel) { sel.value = val; renderListings(); }
+// ── Sign-In Modal ──────────────────────────────────────────────
+function openModal() {
+  show(el("signin-modal"));
+  setTimeout(() => el("modal-email")?.focus(), 80);
+}
+
+function closeModal() {
+  hide(el("signin-modal"));
+  show(el("modal-form"));
+  hide(el("modal-sent"));
+  setErr("modal-error", "");
+  const btn = el("modal-send-btn");
+  if (btn) { btn.disabled = false; btn.textContent = "Send Magic Link"; }
+  const inp = el("modal-email");
+  if (inp) inp.value = "";
+}
+
+async function sendMagicLink() {
+  const email = (el("modal-email")?.value || "").trim().toLowerCase();
+  setErr("modal-error", "");
+
+  if (!email)                     return setErr("modal-error", "Enter your BU email.");
+  if (!email.endsWith("@bu.edu")) return setErr("modal-error", "Only @bu.edu addresses are allowed.");
+
+  const btn = el("modal-send-btn");
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  try {
+    await sendSignInLinkToEmail(auth, email, {
+      url: window.location.origin + window.location.pathname,
+      handleCodeInApp: true,
+    });
+    localStorage.setItem("buSwapEmail", email);
+    hide(el("modal-form"));
+    show(el("modal-sent"));
+    if (el("modal-sent-email")) el("modal-sent-email").textContent = email;
+
+  } catch (err) {
+    console.error("Magic link error:", err.code, err.message);
+
+    // Show the specific error so it's actually fixable
+const msgs = {
+  "auth/operation-not-allowed":
+    `Email link sign-in is not turned on yet. Go to Firebase Console → Authentication → Sign-in method → Email/Password → enable "Email link (passwordless sign-in)". (auth/operation-not-allowed)`,
+
+  "auth/unauthorized-continue-uri":
+    `Domain not authorized. Go to Firebase Console → Authentication → Settings → Authorized domains → add "${location.hostname}". (auth/unauthorized-continue-uri)`,
+
+  "auth/invalid-continue-uri":
+    "Invalid redirect URL. (auth/invalid-continue-uri)",
+
+  "auth/too-many-requests":
+    "Too many attempts — please wait a few minutes and try again.",
 };
 
-// ── Auth: Email Link ───────────────────────────────────────────
-function handleEmailReturn() {
+    setErr("modal-error", msgs[err.code] || `Error ${err.code}: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = "Send Magic Link";
+  }
+}
+
+// ── Handle Return from Email Link ──────────────────────────────
+function handleEmailLink() {
   if (!isSignInWithEmailLink(auth, window.location.href)) return;
-  let email = localStorage.getItem("buSwapEmail");
-  if (!email) email = prompt("Please enter your BU email to finish signing in:");
+
+  let email = localStorage.getItem("buSwapEmail")
+    || window.prompt("Enter your BU email to finish signing in:");
   if (!email) return;
+
   signInWithEmailLink(auth, email, window.location.href)
     .then(() => {
       localStorage.removeItem("buSwapEmail");
       history.replaceState(null, "", location.pathname);
+      closeModal();
     })
-    .catch((err) => {
-      console.error(err);
-      openSignInModal("Sign-in link expired or already used — request a new one.");
-    });
+    .catch(err => console.error("Sign-in completion error:", err));
 }
 
-async function sendLink() {
-  const email = el("email-input").value.trim().toLowerCase();
-  clearErr("signin-error");
-  if (!email)                     return showErr("signin-error", "Enter your BU email.");
-  if (!email.endsWith("@bu.edu")) return showErr("signin-error", "Only @bu.edu addresses are allowed.");
+// ── Load Signed-In User's Listing ─────────────────────────────
+async function loadUserListing() {
+  if (!currentUser) return;
 
-  const btn = el("send-link-btn");
-  btn.disabled = true; btn.textContent = "Sending…";
+  const docId = emailToDocId(currentUser.email);
+  const snap  = await getDoc(doc(db, "listings", docId));
+  hasListing  = snap.exists();
 
-  // Use the current page URL as the redirect — make sure this domain is
-  // listed under Firebase Console → Authentication → Settings → Authorized domains
-  const actionCodeSettings = {
-    url: window.location.origin + window.location.pathname,
-    handleCodeInApp: true,
-  };
-
-  try {
-    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    localStorage.setItem("buSwapEmail", email);
-    el("sent-email-display").textContent = email;
-    hide(el("signin-form-inner"));
-    show(el("signin-sent"));
-  } catch (err) {
-    console.error("sendSignInLinkToEmail error:", err.code, err.message);
-
-    // Give a specific, useful error based on the Firebase error code
-    let msg = "Could not send link. ";
-    if (err.code === "auth/unauthorized-continue-uri") {
-      msg += `The domain "${window.location.hostname}" isn't authorized in Firebase. Add it under Authentication → Settings → Authorized domains.`;
-    } else if (err.code === "auth/invalid-continue-uri") {
-      msg += "The redirect URL is invalid.";
-    } else if (err.code === "auth/missing-android-pkg-name" || err.code === "auth/missing-ios-bundle-id") {
-      msg += "App configuration error.";
-    } else {
-      msg += `(${err.code}) Please try again or contact support.`;
-    }
-    showErr("signin-error", msg);
-    resetSignInBtn();
-  }
-}
-
-function resetSignInBtn() {
-  const btn = el("send-link-btn");
-  if (btn) { btn.disabled = false; btn.textContent = "Send Sign-In Link"; }
-}
-
-// ── User State ─────────────────────────────────────────────────
-async function loadUserState() {
-  const snap = await getDoc(doc(db, "listings", currentUser.uid));
-  hasListing = snap.exists();
+  // Email display (field hidden, display shown)
+  hide(el("f-email-wrap"));
+  show(el("f-email-display"));
+  if (el("f-email-display")) el("f-email-display").textContent = `✉️ ${currentUser.email}`;
 
   if (hasListing) {
-    const cSnap = await getDoc(doc(db, "contacts", currentUser.uid));
-    populateForm(snap.data(), cSnap.exists() ? cSnap.data() : {});
-    el("form-heading").textContent    = "Update My Listing";
-    el("form-subheading").textContent = "Your listing is live. Update anything below.";
-    el("submit-btn").textContent      = "Update Listing";
-    show(el("delete-listing-btn"));
+    const cSnap = await getDoc(doc(db, "contacts", docId));
+    fillForm(snap.data(), cSnap.exists() ? cSnap.data() : {});
+    el("form-title").textContent    = "Update Your Listing";
+    el("form-subtitle").textContent = "Your listing is live — update or remove it below.";
+    el("submit-btn").textContent    = "Update Listing";
+    show(el("delete-btn"));
   } else {
-    el("form-heading").textContent    = "Submit Your Swap Listing";
-    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info for other listings.";
-    el("submit-btn").textContent      = "Submit Listing";
-    hide(el("delete-listing-btn"));
-  }
-  updateBanner();
-}
-
-function updateBanner() {
-  // Show banner only for signed-in users without a listing
-  if (currentUser && !hasListing) {
-    show(el("no-listing-banner"));
-  } else {
-    hide(el("no-listing-banner"));
+    el("form-title").textContent    = "Submit Your Swap Listing";
+    el("form-subtitle").textContent = "Your contact info will only be visible to signed-in BU students.";
+    el("submit-btn").textContent    = "Submit Listing";
+    hide(el("delete-btn"));
   }
 }
 
-// ── Listings Listener ──────────────────────────────────────────
-function startPublicListingsListener() {
+// ── Fetch Contacts (auth required) ────────────────────────────
+async function refreshContacts() {
+  if (!currentUser) { contactsMap = {}; return; }
+  try {
+    const snap = await getDocs(collection(db, "contacts"));
+    contactsMap = {};
+    snap.forEach(d => { contactsMap[d.id] = d.data(); });
+  } catch (_) { contactsMap = {}; }
+}
+
+// ── Real-Time Listings Listener ────────────────────────────────
+function startListingsListener() {
   if (unsubListings) unsubListings();
   const q = query(collection(db, "listings"), orderBy("submittedAt", "desc"));
-  unsubListings = onSnapshot(q, async (snapshot) => {
-    allListings = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-    // Load contacts only if signed in AND has a listing
-    if (currentUser && hasListing) {
-      try {
-        const cs = await getDocs(collection(db, "contacts"));
-        contactsMap = {};
-        cs.forEach((d) => { contactsMap[d.id] = d.data(); });
-      } catch (_) { contactsMap = {}; }
-    } else {
-      contactsMap = {};
+  unsubListings = onSnapshot(q,
+    (snap) => {
+      allListings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderTable();
+    },
+    (err) => {
+      console.error("Listings listener error:", err);
+      const tbody = el("listings-tbody");
+      if (tbody) tbody.innerHTML = `
+        <tr><td colspan="7" style="padding:2rem;text-align:center;color:#dc2626">
+          Error loading listings — check your Firestore rules.<br>
+          <small>${esc(err.message)}</small>
+        </td></tr>`;
     }
-
-    renderListings();
-  });
+  );
 }
 
 // ── Render Table ───────────────────────────────────────────────
-function renderListings() {
+function renderTable() {
   const tbody = el("listings-tbody");
   if (!tbody) return;
 
@@ -369,17 +358,16 @@ function renderListings() {
   const fSort      = el("filter-sort")?.value      || "newest";
   const fSearch    = (el("filter-search")?.value   || "").toLowerCase().trim();
 
-  // Exclude the current user's own listing if signed in
-  let list = currentUser
-    ? allListings.filter((l) => l.id !== currentUser.uid)
-    : allListings;
+  // Exclude own listing
+  const myDocId = currentUser ? emailToDocId(currentUser.email) : null;
+  let list = allListings.filter(l => l.id !== myDocId);
 
-  if (fGender)    list = list.filter((l) => l.housingGender   === fGender);
-  if (fBuilding)  list = list.filter((l) => l.currentBuilding === fBuilding);
-  if (fOccupancy) list = list.filter((l) => l.occupancy       === fOccupancy);
-  if (fRoommate !== "") list = list.filter((l) => String(l.bringingRoommate) === fRoommate);
+  if (fGender)    list = list.filter(l => l.housingGender   === fGender);
+  if (fBuilding)  list = list.filter(l => l.currentBuilding === fBuilding);
+  if (fOccupancy) list = list.filter(l => l.occupancy       === fOccupancy);
+  if (fRoommate !== "") list = list.filter(l => String(l.bringingRoommate) === fRoommate);
   if (fSearch) {
-    list = list.filter((l) => {
+    list = list.filter(l => {
       const blob = [
         l.currentBuilding, l.housingGender, l.occupancy,
         l.pitch, l.otherDetails,
@@ -391,119 +379,98 @@ function renderListings() {
     });
   }
 
-  if (fSort === "oldest") {
-    list = [...list].reverse();
-  } else if (fSort === "building") {
-    list = [...list].sort((a, b) =>
-      (a.currentBuilding || "").localeCompare(b.currentBuilding || "")
-    );
-  }
+  if (fSort === "oldest") list = [...list].reverse();
+  else if (fSort === "building")
+    list = [...list].sort((a,b) => (a.currentBuilding||"").localeCompare(b.currentBuilding||""));
 
   const countEl = el("listings-count");
   if (countEl) countEl.textContent = `${list.length} listing${list.length !== 1 ? "s" : ""}`;
 
-  if (list.length === 0) {
-    const filtered = fGender || fBuilding || fOccupancy || fRoommate !== "" || fSearch;
-    tbody.innerHTML = `
-      <tr><td colspan="7">
-        <div class="empty-state">
-          <div class="icon">🏠</div>
-          <p>${filtered ? "No listings match your filters." : "No listings yet — be the first!"}</p>
-        </div>
-      </td></tr>`;
+  if (!list.length) {
+    const filtered = fGender || fBuilding || fOccupancy || fRoommate || fSearch;
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="empty-icon">🏠</div>
+        <p>${filtered ? "No listings match your filters." : "No listings yet — be the first to submit!"}</p>
+      </div>
+    </td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list.map(renderRow).join("");
+  tbody.innerHTML = list.map(buildRow).join("");
+  // Wire up locked contact cells to open modal
+  tbody.querySelectorAll(".contact-locked").forEach(cell =>
+    cell.addEventListener("click", openModal)
+  );
 }
 
-function renderRow(listing) {
-  const date = listing.submittedAt?.toDate
-    ? listing.submittedAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "Recently";
+function buildRow(l) {
+  const date = l.submittedAt?.toDate
+    ? l.submittedAt.toDate().toLocaleDateString("en-US",{month:"short",day:"numeric"})
+    : "—";
+  const wg = (l.wantedGenders     || []).join(", ") || "—";
+  const wo = (l.wantedOccupancies || []).join(", ") || "—";
+  const wb = (l.wantedBuildings   || []).join(", ") || "—";
 
-  const wantedGenders     = (listing.wantedGenders     || []).join(", ") || "—";
-  const wantedBuildings   = (listing.wantedBuildings   || []).join(", ") || "—";
-  const wantedOccupancies = (listing.wantedOccupancies || []).join(", ") || "—";
-
-  let contactHtml = "";
-
+  let contactCell;
   if (!currentUser) {
-    // Guest: not signed in at all
-    contactHtml = `
-      <span class="contact-locked-inline">🔒 Sign in to view</span><br>
-      <button class="contact-signin-btn" onclick="window._openSignIn()">Sign In →</button>
-    `;
-  } else if (!hasListing) {
-    // Signed in but no listing submitted
-    contactHtml = `<span class="contact-locked-inline">🔒 Submit listing to unlock</span>`;
+    contactCell = `<span class="contact-locked" title="Sign in to view">🔒 Sign in to view</span>`;
   } else {
-    // Signed in + has listing → show contacts
-    const c = contactsMap[listing.id] || {};
+    const c = contactsMap[l.id] || {};
     const parts = [];
-    if (listing.email)    parts.push(`<a href="mailto:${esc(listing.email)}" class="contact-link">${esc(listing.email)}</a>`);
+    if (l.email)          parts.push(`<a href="mailto:${esc(l.email)}" class="contact-link">${esc(l.email)}</a>`);
     if (c.redditUsername) parts.push(`<small class="muted">${esc(c.redditUsername)}</small>`);
     if (c.phone)          parts.push(`<small class="muted">${esc(c.phone)}</small>`);
     if (c.otherContact)   parts.push(`<small class="muted">${esc(c.otherContact)}</small>`);
-    contactHtml = parts.join("<br>") || "(none provided)";
+    contactCell = parts.join("<br>") || "<span class='muted'>—</span>";
   }
 
   return `<tr>
-    <td><span class="badge">${esc(listing.currentBuilding || "—")}</span></td>
-    <td class="muted">${esc(listing.housingGender || "—")}</td>
+    <td><span class="badge">${esc(l.currentBuilding||"—")}</span></td>
+    <td class="muted">${esc(l.housingGender||"—")}</td>
     <td class="muted">
-      ${esc(listing.occupancy || "—")}
-      ${listing.bringingRoommate ? `<br><span class="badge gold">+Roommate</span>` : ""}
+      ${esc(l.occupancy||"—")}
+      ${l.bringingRoommate ? `<br><span class="badge gold">+Roommate</span>` : ""}
     </td>
     <td>
-      <div style="max-width:260px;line-height:1.5">${esc(listing.pitch || "—")}</div>
-      ${listing.otherDetails
-        ? `<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-top:4px">${esc(listing.otherDetails)}</div>`
+      <div>${esc(l.pitch||"—")}</div>
+      ${l.otherDetails
+        ? `<div style="font-size:.8rem;color:var(--muted);font-style:italic;margin-top:4px">${esc(l.otherDetails)}</div>`
         : ""}
     </td>
-    <td class="muted" style="font-size:0.82rem;min-width:160px">
-      <div><strong>Gender:</strong> ${esc(wantedGenders)}</div>
-      <div><strong>Occ.:</strong> ${esc(wantedOccupancies)}</div>
-      <div><strong>Buildings:</strong> ${esc(wantedBuildings)}</div>
+    <td class="muted" style="font-size:.82rem;min-width:150px">
+      <div><b>Gender:</b> ${esc(wg)}</div>
+      <div><b>Occ.:</b> ${esc(wo)}</div>
+      <div><b>Bldgs:</b> ${esc(wb)}</div>
     </td>
-    <td style="min-width:140px">${contactHtml}</td>
+    <td style="min-width:140px">${contactCell}</td>
     <td class="muted">${date}</td>
   </tr>`;
 }
 
-// Expose for inline onclick in table rows
-window._openSignIn = () => openSignInModal("Sign in with your BU email to view contact info.");
-
-function clearFilters() {
-  ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
-    .forEach((id) => { const e = el(id); if (e) e.value = id === "filter-sort" ? "newest" : ""; });
-  const s = el("filter-search"); if (s) s.value = "";
-  renderListings();
-}
-
-// ── Form: Populate ─────────────────────────────────────────────
-function populateForm(listing, contact) {
+// ── Fill Form (edit mode) ──────────────────────────────────────
+function fillForm(listing, contact) {
   el("f-gender").value    = listing.housingGender   || "";
   el("f-building").value  = listing.currentBuilding || "";
   el("f-occupancy").value = listing.occupancy       || "";
 
-  document.querySelectorAll("[name='f-roommate']").forEach((r) => {
+  document.querySelectorAll("[name='f-roommate']").forEach(r => {
     r.checked = r.value === String(listing.bringingRoommate);
   });
 
   el("f-pitch").value   = listing.pitch        || "";
-  el("pitch-count").textContent   = (listing.pitch || "").length;
+  el("pitch-count").textContent   = (listing.pitch  || "").length;
   el("f-details").value = listing.otherDetails || "";
   el("details-count").textContent = (listing.otherDetails || "").length;
 
-  document.querySelectorAll("[name='wanted-gender']").forEach((cb) => {
-    cb.checked = (listing.wantedGenders || []).includes(cb.value);
+  document.querySelectorAll("[name='wanted-gender']").forEach(cb => {
+    cb.checked = (listing.wantedGenders    || []).includes(cb.value);
   });
-  document.querySelectorAll("[name='wanted-building']").forEach((cb) => {
-    cb.checked = (listing.wantedBuildings || []).includes(cb.value);
+  document.querySelectorAll("[name='wanted-building']").forEach(cb => {
+    cb.checked = (listing.wantedBuildings  || []).includes(cb.value);
   });
-  document.querySelectorAll("[name='wanted-occupancy']").forEach((cb) => {
-    cb.checked = (listing.wantedOccupancies || []).includes(cb.value);
+  document.querySelectorAll("[name='wanted-occupancy']").forEach(cb => {
+    cb.checked = (listing.wantedOccupancies|| []).includes(cb.value);
   });
 
   el("f-reddit").value = contact.redditUsername || "";
@@ -511,18 +478,40 @@ function populateForm(listing, contact) {
   el("f-other").value  = contact.otherContact  || "";
 }
 
-// ── Form: Submit ───────────────────────────────────────────────
-async function submitListing(e) {
-  e.preventDefault();
-  clearErr("form-error");
-  clearMsg("form-success");
+// ── Reset Form ─────────────────────────────────────────────────
+function resetForm() {
+  el("listing-form")?.reset();
+  document.querySelectorAll("#listing-form input[type='checkbox'], #listing-form input[type='radio']")
+    .forEach(i => i.checked = false);
+  el("pitch-count").textContent   = "0";
+  el("details-count").textContent = "0";
+  el("form-title").textContent    = "Submit Your Swap Listing";
+  el("form-subtitle").textContent = "Your contact info will only be visible to signed-in BU students.";
+  el("submit-btn").textContent    = "Submit Listing";
+  show(el("f-email-wrap"));
+  hide(el("f-email-display"));
+  hide(el("delete-btn"));
+  setErr("form-error", "");
+  setMsg("submit-success", "");
+}
 
-  // If not signed in, prompt sign-in and stop
-  if (!currentUser) {
-    openSignInModal("Sign in with your BU email to submit your listing.");
-    return;
+// ── Form Submit ────────────────────────────────────────────────
+async function handleSubmit(e) {
+  e.preventDefault();
+  setErr("form-error", "");
+  setMsg("submit-success", "");
+
+  // Determine email
+  let email = "";
+  if (currentUser) {
+    email = currentUser.email;
+  } else {
+    email = (el("f-email")?.value || "").trim().toLowerCase();
+    if (!email)                     return setErr("form-error", "Enter your BU email.");
+    if (!email.endsWith("@bu.edu")) return setErr("form-error", "Must be a @bu.edu email address.");
   }
 
+  // Collect form values
   const housingGender     = el("f-gender").value;
   const currentBuilding   = el("f-building").value;
   const occupancy         = el("f-occupancy").value;
@@ -536,109 +525,124 @@ async function submitListing(e) {
   const phone  = el("f-phone").value.trim();
   const other  = el("f-other").value.trim();
 
-  if (!housingGender)           return showErr("form-error", "Select your housing assignment gender.");
-  if (!currentBuilding)         return showErr("form-error", "Select your current building.");
-  if (!occupancy)               return showErr("form-error", "Select your room occupancy.");
-  if (!roommateEl)              return showErr("form-error", "Indicate whether you're bringing a roommate.");
-  if (!pitch)                   return showErr("form-error", "Add a pitch for your room.");
-  if (!wantedGenders.length)    return showErr("form-error", "Select at least one gender housing preference.");
-  if (!wantedBuildings.length)  return showErr("form-error", "Select at least one building you'd consider.");
-  if (!wantedOccupancies.length) return showErr("form-error", "Select at least one occupancy you'd consider.");
-  if (!reddit && !phone && !other) return showErr("form-error", "Add at least one contact method.");
+  // Validate
+  if (!housingGender)            return setErr("form-error","Select your housing assignment gender.");
+  if (!currentBuilding)          return setErr("form-error","Select your current building.");
+  if (!occupancy)                return setErr("form-error","Select your room occupancy.");
+  if (!roommateEl)               return setErr("form-error","Indicate whether you're bringing a roommate.");
+  if (!pitch)                    return setErr("form-error","Add a pitch for your room.");
+  if (!wantedGenders.length)     return setErr("form-error","Select at least one gender housing preference.");
+  if (!wantedBuildings.length)   return setErr("form-error","Select at least one building you'd consider.");
+  if (!wantedOccupancies.length) return setErr("form-error","Select at least one occupancy you'd consider.");
+  if (!reddit && !phone && !other) return setErr("form-error","Add at least one contact method.");
 
   const btn = el("submit-btn");
-  btn.disabled = true; btn.textContent = "Saving…";
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  const docId      = emailToDocId(email);
+  const listingRef = doc(db, "listings", docId);
+  const contactRef = doc(db, "contacts",  docId);
 
   try {
-    const isNew      = !hasListing;
-    const listingRef = doc(db, "listings", currentUser.uid);
-    const contactRef = doc(db, "contacts",  currentUser.uid);
+    const existingSnap  = await getDoc(listingRef);
+    const alreadyExists = existingSnap.exists();
 
+    // Block unauthenticated users from overwriting existing listings
+    if (!currentUser && alreadyExists) {
+      setErr("form-error", "A listing with this email already exists. Sign in with your BU email to edit it.");
+      btn.disabled = false;
+      btn.textContent = "Submit Listing";
+      return;
+    }
+
+    const now = serverTimestamp();
     const listingData = {
-      email: currentUser.email,
-      housingGender, currentBuilding, occupancy,
+      email, housingGender, currentBuilding, occupancy,
       bringingRoommate: roommateEl.value === "true",
       pitch, otherDetails,
       wantedGenders, wantedBuildings, wantedOccupancies,
-      updatedAt: serverTimestamp(),
+      updatedAt: now,
+      ...(!alreadyExists && { submittedAt: now }),
+    };
+    const contactData = {
+      email,
+      redditUsername: reddit,
+      phone,
+      otherContact: other,
+      updatedAt: now,
     };
 
-    if (isNew) {
-      listingData.submittedAt = serverTimestamp();
-      await setDoc(listingRef, listingData);
+    const batch = writeBatch(db);
+    alreadyExists
+      ? batch.update(listingRef, listingData)
+      : batch.set(listingRef, listingData);
+    batch.set(contactRef, contactData, { merge: true });
+    await batch.commit();
+
+    if (currentUser) {
+      hasListing = true;
+      el("form-title").textContent    = "Update Your Listing";
+      el("form-subtitle").textContent = "Your listing is live — update or remove it below.";
+      el("submit-btn").textContent    = "Update Listing";
+      show(el("delete-btn"));
+      await refreshContacts();
+      renderTable();
+      setMsg("submit-success", "✅ Listing updated!");
     } else {
-      await updateDoc(listingRef, listingData);
+      // Reset for next person
+      el("listing-form").reset();
+      document.querySelectorAll("#listing-form input[type='checkbox'], #listing-form input[type='radio']")
+        .forEach(i => i.checked = false);
+      el("pitch-count").textContent   = "0";
+      el("details-count").textContent = "0";
+
+      setMsg("submit-success",
+        `🎉 Listing submitted! Want to edit it later?
+         <button id="post-signin-btn" class="btn-inline" style="margin-left:8px">Sign In →</button>`
+      );
+      el("post-signin-btn")?.addEventListener("click", openModal);
     }
 
-    await setDoc(contactRef, {
-      redditUsername: reddit, phone, otherContact: other,
-      updatedAt: serverTimestamp(),
-    });
-
-    hasListing = true;
-    updateBanner();
-
-    try {
-      const cs = await getDocs(collection(db, "contacts"));
-      contactsMap = {};
-      cs.forEach((d) => { contactsMap[d.id] = d.data(); });
-    } catch (_) {}
-
-    renderListings();
-
-    el("form-heading").textContent    = "Update My Listing";
-    el("form-subheading").textContent = "Your listing is live. Update anything below.";
-    el("submit-btn").textContent      = "Update Listing";
-    show(el("delete-listing-btn"));
-
-    if (isNew) {
-      showMsg("form-success", "🎉 Listing submitted! You can now view contact info for other swappers.");
-      setTimeout(() => switchTab("browse"), 2500);
-    } else {
-      showMsg("form-success", "✅ Listing updated!");
-    }
   } catch (err) {
-    console.error(err);
-    showErr("form-error", "Failed to save. Please try again.");
+    console.error("Submit error:", err);
+    setErr("form-error", `Save failed: ${err.code || err.message} — check your Firestore rules.`);
   } finally {
     btn.disabled = false;
-    btn.textContent = hasListing ? "Update Listing" : "Submit Listing";
+    btn.textContent = (currentUser && hasListing) ? "Update Listing" : "Submit Listing";
   }
 }
 
-// ── Form: Delete ───────────────────────────────────────────────
-async function deleteListing() {
-  const confirmed = confirm(
-    "Remove your listing? You will no longer appear in the swap database and will lose access to other people's contact info."
-  );
-  if (!confirmed) return;
+// ── Delete Listing ─────────────────────────────────────────────
+async function handleDelete() {
+  if (!currentUser) return;
+  if (!confirm("Remove your listing? You'll no longer appear in the database.")) return;
+
+  const docId = emailToDocId(currentUser.email);
 
   try {
-    await deleteDoc(doc(db, "listings", currentUser.uid));
-    await deleteDoc(doc(db, "contacts",  currentUser.uid));
+    const batch = writeBatch(db);
+    batch.delete(doc(db, "listings", docId));
+    batch.delete(doc(db, "contacts",  docId));
+    await batch.commit();
 
     hasListing  = false;
     contactsMap = {};
-    allListings = allListings.filter((l) => l.id !== currentUser.uid);
+    allListings = allListings.filter(l => l.id !== docId);
 
-    updateBanner();
-    renderListings();
+    renderTable();
+    resetForm();
 
-    el("listing-form").reset();
-    document.querySelectorAll(
-      "#listing-form input[type='checkbox'], #listing-form input[type='radio']"
-    ).forEach((i) => (i.checked = false));
-    el("pitch-count").textContent   = "0";
-    el("details-count").textContent = "0";
+    // Still signed in — keep email display
+    hide(el("f-email-wrap"));
+    show(el("f-email-display"));
+    if (el("f-email-display")) el("f-email-display").textContent = `✉️ ${currentUser.email}`;
+    hide(el("edit-notice")); // still signed in, no need to sign in again
 
-    el("form-heading").textContent    = "Submit Your Swap Listing";
-    el("form-subheading").textContent = "Fill this out to appear in the swap database and unlock contact info for other listings.";
-    el("submit-btn").textContent      = "Submit Listing";
-    hide(el("delete-listing-btn"));
+    setMsg("submit-success", "Your listing has been removed.");
 
-    showMsg("form-success", "Your listing has been removed.");
   } catch (err) {
-    console.error(err);
+    console.error("Delete error:", err);
     alert("Failed to delete. Please try again.");
   }
 }
