@@ -252,14 +252,11 @@ async function sendMagicLink() {
     // Show the specific error so it's actually fixable
 const msgs = {
   "auth/operation-not-allowed":
-    `Email link sign-in is not turned on yet. Go to Firebase Console → Authentication → Sign-in method → Email/Password → enable "Email link (passwordless sign-in)". (auth/operation-not-allowed)`,
-
+    "Email link sign-in is not turned on yet. Go to Firebase Console → Authentication → Sign-in method → Email/Password → enable \"Email link (passwordless sign-in)\". (auth/operation-not-allowed)",
   "auth/unauthorized-continue-uri":
     `Domain not authorized. Go to Firebase Console → Authentication → Settings → Authorized domains → add "${location.hostname}". (auth/unauthorized-continue-uri)`,
-
   "auth/invalid-continue-uri":
     "Invalid redirect URL. (auth/invalid-continue-uri)",
-
   "auth/too-many-requests":
     "Too many attempts — please wait a few minutes and try again.",
 };
@@ -497,9 +494,6 @@ function resetForm() {
 
 // ── Form Submit ────────────────────────────────────────────────
 async function handleSubmit(e) {
-  if (!currentUser) {
-  return setErr("form-error", "Please sign in with your BU email first.");
-}
   e.preventDefault();
   setErr("form-error", "");
   setMsg("submit-success", "");

@@ -2,13 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── Listings ─────────────────────────────────────────────
+    // Public to read. Anyone with a @bu.edu email can create.
+    // Only the authenticated owner can update or delete.
     match /listings/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.matches(".*@bu\\.edu");
+
+      allow update, delete: if request.auth != null
+                            && request.auth.token.email == resource.data.email;
     }
 
+    // ── Contacts ─────────────────────────────────────────────
+    // Only signed-in users can read.
+    // Anyone with a @bu.edu email can create (initial submission).
+    // Only the authenticated owner can update or delete.
     match /contacts/{docId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.matches(".*@bu\\.edu");
+
+      allow update, delete: if request.auth != null
+                            && request.auth.token.email == resource.data.email;
     }
   }
 }
