@@ -50,6 +50,7 @@ const GENDERS     = ["Male", "Female", "Gender Neutral"];
 // ── State ──────────────────────────────────────────────────────
 let currentUser   = null;
 let hasListing    = false;
+let myListing     = null;        // ← ADD THIS LINE
 let allListings   = [];
 let contactsMap   = {};
 let unsubListings = null;
@@ -281,6 +282,7 @@ async function loadUserListing() {
   hasListing = snap.exists();
   if (hasListing) {
     const cSnap = await getDoc(doc(db,"contacts",currentUser.uid));
+    myListing = snap.data();     // ← ADD THIS LINE
     fillForm(snap.data(), cSnap.exists()?cSnap.data():{});
     $("form-title").textContent = "Update Your Listing";
     $("form-sub").textContent   = "Your listing is live — edit or remove it below.";
@@ -310,11 +312,9 @@ function renderMyPreview() {
   const body      = $("my-preview-body");
   if (!container || !body) return;
 
-  if (!currentUser || !hasListing) { hide(container); return; }
+  if (!currentUser || !hasListing || !myListing) { hide(container); return; }
 
-  const l = allListings.find(x => x.id === currentUser.uid);
-  if (!l) { hide(container); return; }
-
+  const l  = myListing;
   const wg = (l.wantedGenders     ||[]).join(", ")||"—";
   const wt = (l.wantedTypes       ||[]).join(", ")||"—";
   const wo = (l.wantedOccupancies ||[]).join(", ")||"—";
@@ -332,7 +332,9 @@ function renderMyPreview() {
       <div>
         <div class="preview-pitch-label">Your pitch</div>
         <div class="preview-pitch">${esc(l.pitch||"—")}</div>
-        ${l.otherDetails?`<div style="font-size:.82rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(l.otherDetails)}</div>`:""}
+        ${l.otherDetails
+          ?`<div style="font-size:.82rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(l.otherDetails)}</div>`
+          :""}
       </div>
     </div>
     <div class="preview-col">
@@ -570,6 +572,7 @@ async function handleSubmit(e) {
     await batch.commit();
 
     hasListing = true;
+    myListing  = listingData;    // ← ADD THIS LINE
     $("form-title").textContent = "Update Your Listing";
     $("form-sub").textContent   = "Your listing is live — edit or remove it below.";
     show($("btn-delete"));
@@ -605,6 +608,7 @@ async function handleDelete() {
     await batch.commit();
 
     hasListing  = false;
+    myListing   = null;          // ← ADD THIS LINE
     contactsMap = {};
     allListings = allListings.filter(l => l.id !== currentUser.uid);
     renderTable();
