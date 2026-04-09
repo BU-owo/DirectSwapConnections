@@ -44,7 +44,7 @@ const BUILDINGS = [
   "Fenway Longwood House",
 ];
 const ROOM_TYPES  = ["Dorm", "Dorm Suite", "Apartment Suite", "Apartment"];
-const OCCUPANCIES = ["Single","Double","Triple","Quad","Studio","1-Bedroom","2-Bedroom","3-Bedroom","4+ Bedrooms"];
+const OCCUPANCIES = ["Single","Double","Triple","Quad","Studio"];
 const GENDERS     = ["Male", "Female", "Gender Neutral"];
 
 // ── State ──────────────────────────────────────────────────────
