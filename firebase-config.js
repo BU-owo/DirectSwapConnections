@@ -1,7 +1,6 @@
 window.__FIREBASE_CONFIG__ = {
-  apiKey: "AIzaSyAo8yMTgXG5itJnbWsIl8WW_YGzK_xF_ZI",
+  apiKey: "AIzaSyDzi9dDx9wC8CmFgo6Pjb6YIjlcoLxjbyg",
   authDomain: "bu-direct-swap.firebaseapp.com",
-  authDomain: "bu-owo.github.io",
   projectId: "bu-direct-swap",
   storageBucket: "bu-direct-swap.firebasestorage.app",
   messagingSenderId: "353680083539",
