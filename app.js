@@ -6,50 +6,52 @@ const firebaseConfig = {
   storageBucket: "bu-direct-swap.firebasestorage.app",
   messagingSenderId: "353680083539",
   appId: "1:353680083539:web:ab313dc71b39a7c74bd4a6",
-  measurementId: "G-CZ1EQX1HS1"
 };
 
-// ── Imports ────────────────────────────────────────────────────
-import { initializeApp } from
-  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, sendSignInLinkToEmail,
-  isSignInWithEmailLink, signInWithEmailLink,
-  signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, writeBatch,
-  getDoc, getDocs, query, orderBy, onSnapshot,
-  serverTimestamp
+  getDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+const app      = initializeApp(firebaseConfig);
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ hd: "bu.edu" }); // hints Google to show BU accounts first
 
-// ── Constants ──────────────────────────────────────────────────
+// ── Data ───────────────────────────────────────────────────────
 const BUILDINGS = [
   "Warren Towers",
-  "West Campus – Claflin Hall",
-  "West Campus – Danielsen Hall",
-  "West Campus – Rich Hall",
-  "West Campus – Sleeper Hall",
-  "Myles Standish Hall",
-  "Shelton Hall",
+  "West Campus (Claflin, Rich, or Sleeper Hall)",
+  "The Towers",
+  "610 Beacon St (formerly Myles Standish)",
   "Kilachand Hall",
-  "The Towers (1019 Comm Ave)",
-  "Student Village I (10 Buick St)",
-  "Student Village II (33 Harry Agganis Way)",
-  "South Campus Brownstones",
-  "Fenway Campus",
-  "Other / Off Campus",
+  "Danielsen Hall",
+  "1019 Comm Ave",
+  "HoJo (575 Comm Ave)",
+  "Bay State Brownstone",
+  "East & Central Campus Brownstone",
+  "South Campus Brownstone",
+  "East Campus / Bay State Apartment",
+  "South Campus Apartment",
+  "StuVi 1",
+  "StuVi 2",
+  "Fenway Campus Center",
+  "Fenway Riverway House",
+  "Fenway Pilgrim House",
+  "Fenway Longwood House",
 ];
+const ROOM_TYPES  = ["Dorm", "Dorm Suite", "Apartment Suite", "Apartment"];
 const OCCUPANCIES = [
-  "Single","Double","Triple","Quad",
-  "Single in Suite","Double in Suite","Triple in Suite",
-  "Studio","1-Bedroom Apartment","2-Bedroom Apartment","3+ Bedroom Apartment",
+  "Single", "Double", "Triple", "Quad",
+  "Studio", "1-Bedroom", "2-Bedroom", "3-Bedroom", "4+ Bedrooms",
 ];
-const GENDERS = ["Men's","Women's","Gender Inclusive"];
+const GENDERS = ["Men's", "Women's", "Gender Inclusive"];
 
 // ── State ──────────────────────────────────────────────────────
 let currentUser   = null;
@@ -59,10 +61,10 @@ let contactsMap   = {};
 let unsubListings = null;
 
 // ── Helpers ────────────────────────────────────────────────────
-const el   = (id) => document.getElementById(id);
-const show = (e)  => e?.classList.remove("hidden");
-const hide = (e)  => e?.classList.add("hidden");
-const getChecked = (name) =>
+const $    = id => document.getElementById(id);
+const show = e  => e?.classList.remove("hidden");
+const hide = e  => e?.classList.add("hidden");
+const getChecked = name =>
   [...document.querySelectorAll(`[name="${name}"]:checked`)].map(cb => cb.value);
 
 function esc(s) {
@@ -70,49 +72,45 @@ function esc(s) {
     .replace(/&/g,"&amp;").replace(/</g,"&lt;")
     .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
+function setErr(id, msg) { const e=$(id); if(!e) return; e.textContent=msg; msg?show(e):hide(e); }
+function setMsg(id, html){ const e=$(id); if(!e) return; e.innerHTML=html;  html?show(e):hide(e); }
 
-// "jsmith@bu.edu" → "jsmith-at-bu-dot-edu"
-function emailToDocId(email) {
-  return email.toLowerCase().replace(/@/g,"-at-").replace(/\./g,"-dot-");
-}
-
-function setErr(id, msg) {
-  const e = el(id);
-  if (!e) return;
-  e.textContent = msg;
-  msg ? show(e) : hide(e);
-}
-function setMsg(id, html) {
-  const e = el(id);
-  if (!e) return;
-  e.innerHTML = html;
-  html ? show(e) : hide(e);
-}
-
-// ── Bootstrap ──────────────────────────────────────────────────
+// ── Boot ───────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   populateOptions();
   bindEvents();
-  handleEmailLink();
-  startListingsListener(); // listings are public — start immediately
+  startListingsListener(); // listings are public — start right away
 
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, async user => {
     currentUser = user;
 
     if (user) {
-      el("nav-email").textContent = user.email;
-      hide(el("auth-out"));
-      show(el("auth-in"));
-      hide(el("contact-banner"));
-      hide(el("edit-notice"));
+      // Nav
+      const av = $("nav-avatar");
+      if (av) { av.src = user.photoURL || ""; user.photoURL ? show(av) : hide(av); }
+      const ne = $("nav-email"); if (ne) ne.textContent = user.email;
+      hide($("state-out")); show($("state-in"));
+
+      // Submit panel
+      hide($("submit-gate")); show($("submit-form"));
+
+      // User pill
+      const pa = $("pill-avatar");
+      if (pa) pa.src = user.photoURL || "";
+      const pe = $("pill-email"); if (pe) pe.textContent = user.email;
+
+      // Contact notice
+      hide($("notice-contact"));
+
+      // Load their listing + refresh contacts
       await loadUserListing();
       await refreshContacts();
       renderTable();
+
     } else {
-      show(el("auth-out"));
-      hide(el("auth-in"));
-      show(el("contact-banner"));
-      show(el("edit-notice"));
+      show($("state-out")); hide($("state-in"));
+      show($("submit-gate")); hide($("submit-form"));
+      show($("notice-contact"));
       hasListing  = false;
       contactsMap = {};
       resetForm();
@@ -121,198 +119,157 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// ── Populate Dropdowns + Checkboxes ───────────────────────────
+// ── Populate dropdowns + checkboxes ───────────────────────────
 function populateOptions() {
-  appendOpts("filter-building",  BUILDINGS);
-  appendOpts("filter-occupancy", OCCUPANCIES);
-  appendOpts("f-building",       BUILDINGS);
-  appendOpts("f-occupancy",      OCCUPANCIES);
-  appendCBs("wanted-genders-wrap",     "wanted-gender",    GENDERS);
-  appendCBs("wanted-buildings-wrap",   "wanted-building",  BUILDINGS);
-  appendCBs("wanted-occupancies-wrap", "wanted-occupancy", OCCUPANCIES);
+  appendOpts("fi-building", BUILDINGS);
+  appendOpts("fi-occ",      OCCUPANCIES);
+  appendOpts("f-building",  BUILDINGS);
+  appendOpts("f-occ",       OCCUPANCIES);
+
+  appendChecks("w-gender",   "wg", GENDERS);
+  appendChecks("w-type",     "wt", ROOM_TYPES);
+  appendChecks("w-occ",      "wo", OCCUPANCIES);
+  appendChecks("w-building", "wb", BUILDINGS);
 }
+
 function appendOpts(selId, items) {
-  const s = el(selId); if (!s) return;
+  const s = $(selId); if (!s) return;
   items.forEach(v => { const o = document.createElement("option"); o.value = o.textContent = v; s.appendChild(o); });
 }
-function appendCBs(wrapId, name, items) {
-  const w = el(wrapId); if (!w) return;
+
+function appendChecks(wrapId, name, items) {
+  const w = $(wrapId); if (!w) return;
   items.forEach(v => {
     const lbl = document.createElement("label");
-    lbl.className = "check-label";
+    lbl.className = "check-opt";
     lbl.innerHTML = `<input type="checkbox" name="${name}" value="${esc(v)}" /> ${esc(v)}`;
     w.appendChild(lbl);
   });
 }
 
-// ── Event Bindings ─────────────────────────────────────────────
+// ── Event bindings ─────────────────────────────────────────────
 function bindEvents() {
-  // Panel switching — every element with data-show
-  document.querySelectorAll("[data-show]").forEach(btn =>
-    btn.addEventListener("click", () => showPanel(btn.dataset.show))
+  // Panel tabs (nav + hero + browse button)
+  document.querySelectorAll("[data-panel]").forEach(btn =>
+    btn.addEventListener("click", () => showPanel(btn.dataset.panel))
   );
 
-  // Modal open triggers
-  el("open-signin")?.addEventListener("click",      openModal);
-  el("banner-signin-btn")?.addEventListener("click", openModal);
-  el("edit-signin-btn")?.addEventListener("click",   openModal);
-
-  // Modal close
-  el("modal-close")?.addEventListener("click", closeModal);
-  el("signin-modal")?.addEventListener("click", (e) => {
-    if (e.target === el("signin-modal")) closeModal();
-  });
-
-  // Modal send link
-  el("modal-send-btn")?.addEventListener("click", sendMagicLink);
-  el("modal-email")?.addEventListener("keydown",  (e) => e.key === "Enter" && sendMagicLink());
+  // All "sign in" triggers
+  document.querySelectorAll("[data-action='signin']").forEach(btn =>
+    btn.addEventListener("click", doSignIn)
+  );
+  $("btn-signin-nav")?.addEventListener("click", doSignIn);
 
   // Sign out
-  el("signout-btn")?.addEventListener("click", () => signOut(auth));
+  $("btn-signout")?.addEventListener("click", () => signOut(auth));
 
   // Filters
-  ["filter-gender","filter-building","filter-occupancy","filter-roommate","filter-sort"]
-    .forEach(id => el(id)?.addEventListener("change", renderTable));
-  el("filter-search")?.addEventListener("input", renderTable);
-  el("clear-filters")?.addEventListener("click", () => {
-    ["filter-gender","filter-building","filter-occupancy","filter-roommate"]
-      .forEach(id => { const e = el(id); if (e) e.value = ""; });
-    const s = el("filter-search"); if (s) s.value = "";
-    const so = el("filter-sort"); if (so) so.value = "newest";
-    renderTable();
-  });
+  const filterIds = ["fi-gender","fi-building","fi-type","fi-occ","fi-roommate","fi-sort"];
+  filterIds.forEach(id => $(id)?.addEventListener("change", renderTable));
+  $("fi-search")?.addEventListener("input", renderTable);
+  $("btn-clear")?.addEventListener("click", clearFilters);
 
   // Form
-  el("listing-form")?.addEventListener("submit", handleSubmit);
-  el("delete-btn")?.addEventListener("click",    handleDelete);
+  $("the-form")?.addEventListener("submit", handleSubmit);
+  $("btn-delete")?.addEventListener("click", handleDelete);
 
   // Buildings select/clear all
-  el("sel-all-bldgs")?.addEventListener("click", () =>
-    document.querySelectorAll("[name='wanted-building']").forEach(cb => cb.checked = true)
+  $("btn-sel-all")?.addEventListener("click", () =>
+    document.querySelectorAll("[name='wb']").forEach(cb => cb.checked = true)
   );
-  el("clr-all-bldgs")?.addEventListener("click", () =>
-    document.querySelectorAll("[name='wanted-building']").forEach(cb => cb.checked = false)
+  $("btn-clr-all")?.addEventListener("click", () =>
+    document.querySelectorAll("[name='wb']").forEach(cb => cb.checked = false)
   );
 
   // Char counters
-  el("f-pitch")?.addEventListener("input",   () => el("pitch-count").textContent   = el("f-pitch").value.length);
-  el("f-details")?.addEventListener("input", () => el("details-count").textContent = el("f-details").value.length);
+  $("f-pitch")?.addEventListener("input",   () => $("ct-pitch").textContent   = $("f-pitch").value.length);
+  $("f-details")?.addEventListener("input", () => $("ct-details").textContent = $("f-details").value.length);
 }
 
-// ── Panel Switching ────────────────────────────────────────────
+// ── Panel switching ────────────────────────────────────────────
 function showPanel(name) {
-  el("panel-browse")?.classList.toggle("hidden", name !== "browse");
-  el("panel-submit")?.classList.toggle("hidden", name !== "submit");
+  $("panel-browse")?.classList.toggle("hidden", name !== "browse");
+  $("panel-submit")?.classList.toggle("hidden", name !== "submit");
   document.querySelectorAll(".nav-tab").forEach(t =>
-    t.classList.toggle("active", t.dataset.show === name)
+    t.classList.toggle("active", t.dataset.panel === name)
   );
 }
 
-// ── Sign-In Modal ──────────────────────────────────────────────
-function openModal() {
-  show(el("signin-modal"));
-  setTimeout(() => el("modal-email")?.focus(), 80);
-}
-
-function closeModal() {
-  hide(el("signin-modal"));
-  show(el("modal-form"));
-  hide(el("modal-sent"));
-  setErr("modal-error", "");
-  const btn = el("modal-send-btn");
-  if (btn) { btn.disabled = false; btn.textContent = "Send Magic Link"; }
-  const inp = el("modal-email");
-  if (inp) inp.value = "";
-}
-
-async function sendMagicLink() {
-  const email = (el("modal-email")?.value || "").trim().toLowerCase();
-  setErr("modal-error", "");
-
-  if (!email)                     return setErr("modal-error", "Enter your BU email.");
-  if (!email.endsWith("@bu.edu")) return setErr("modal-error", "Only @bu.edu addresses are allowed.");
-
-  const btn = el("modal-send-btn");
-  btn.disabled = true;
-  btn.textContent = "Sending…";
-
+// ── Google Sign-In ─────────────────────────────────────────────
+async function doSignIn() {
+  setErr("gate-error", "");
   try {
-    await sendSignInLinkToEmail(auth, email, {
-      url: window.location.origin + window.location.pathname,
-      handleCodeInApp: true,
-    });
-    localStorage.setItem("buSwapEmail", email);
-    hide(el("modal-form"));
-    show(el("modal-sent"));
-    if (el("modal-sent-email")) el("modal-sent-email").textContent = email;
+    const result = await signInWithPopup(auth, provider);
+    const user   = result.user;
 
+    // Enforce @bu.edu
+    if (!user.email?.endsWith("@bu.edu")) {
+      await signOut(auth);
+      setErr("gate-error",
+        `You signed in as ${user.email}. Please use your BU email (@bu.edu) to continue.`
+      );
+      return;
+    }
+    showPanel("submit"); // go to form after sign-in
   } catch (err) {
-    console.error("Magic link error:", err.code, err.message);
+    // Ignore user closing the popup
+    if (["auth/popup-closed-by-user","auth/cancelled-popup-request"].includes(err.code)) return;
 
-    // Show the specific error so it's actually fixable
-const msgs = {
-  "auth/operation-not-allowed":
-    "Email link sign-in is not turned on yet. Go to Firebase Console → Authentication → Sign-in method → Email/Password → enable \"Email link (passwordless sign-in)\". (auth/operation-not-allowed)",
-  "auth/unauthorized-continue-uri":
-    `Domain not authorized. Go to Firebase Console → Authentication → Settings → Authorized domains → add "${location.hostname}". (auth/unauthorized-continue-uri)`,
-  "auth/invalid-continue-uri":
-    "Invalid redirect URL. (auth/invalid-continue-uri)",
-  "auth/too-many-requests":
-    "Too many attempts — please wait a few minutes and try again.",
-};
-
-    setErr("modal-error", msgs[err.code] || `Error ${err.code}: ${err.message}`);
-    btn.disabled = false;
-    btn.textContent = "Send Magic Link";
+    console.error("Sign-in error:", err.code, err.message);
+    const msgs = {
+      "auth/popup-blocked":
+        "Your browser blocked the sign-in popup — please allow popups for this page and try again.",
+      "auth/operation-not-allowed":
+        "Google sign-in isn't enabled yet. Firebase Console → Authentication → Sign-in method → Google → Enable.",
+      "auth/unauthorized-domain":
+        `Domain not authorized. Firebase Console → Authentication → Settings → Authorized domains → add "${location.hostname}".`,
+    };
+    setErr("gate-error", msgs[err.code] || `Sign-in failed (${err.code}): ${err.message}`);
+    show($("gate-error"));
   }
 }
 
-// ── Handle Return from Email Link ──────────────────────────────
-function handleEmailLink() {
-  if (!isSignInWithEmailLink(auth, window.location.href)) return;
-
-  let email = localStorage.getItem("buSwapEmail")
-    || window.prompt("Enter your BU email to finish signing in:");
-  if (!email) return;
-
-  signInWithEmailLink(auth, email, window.location.href)
-    .then(() => {
-      localStorage.removeItem("buSwapEmail");
-      history.replaceState(null, "", location.pathname);
-      closeModal();
-    })
-    .catch(err => console.error("Sign-in completion error:", err));
+// ── Listings listener (real-time, public) ──────────────────────
+function startListingsListener() {
+  if (unsubListings) unsubListings();
+  const q = query(collection(db, "listings"), orderBy("submittedAt", "desc"));
+  unsubListings = onSnapshot(q,
+    snap => {
+      allListings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderTable();
+    },
+    err => {
+      console.error("Listings error:", err);
+      const tb = $("listings-tbody");
+      if (tb) tb.innerHTML = `<tr><td colspan="8" style="padding:2rem;text-align:center;color:#dc2626">
+        Error loading listings — check Firestore rules.<br><small>${esc(err.message)}</small>
+      </td></tr>`;
+    }
+  );
 }
 
-// ── Load Signed-In User's Listing ─────────────────────────────
+// ── Load signed-in user's listing ─────────────────────────────
 async function loadUserListing() {
   if (!currentUser) return;
-
-  const docId = emailToDocId(currentUser.email);
-  const snap  = await getDoc(doc(db, "listings", docId));
-  hasListing  = snap.exists();
-
-  // Email display (field hidden, display shown)
-  hide(el("f-email-wrap"));
-  show(el("f-email-display"));
-  if (el("f-email-display")) el("f-email-display").textContent = `✉️ ${currentUser.email}`;
+  const snap = await getDoc(doc(db, "listings", currentUser.uid));
+  hasListing = snap.exists();
 
   if (hasListing) {
-    const cSnap = await getDoc(doc(db, "contacts", docId));
+    const cSnap = await getDoc(doc(db, "contacts", currentUser.uid));
     fillForm(snap.data(), cSnap.exists() ? cSnap.data() : {});
-    el("form-title").textContent    = "Update Your Listing";
-    el("form-subtitle").textContent = "Your listing is live — update or remove it below.";
-    el("submit-btn").textContent    = "Update Listing";
-    show(el("delete-btn"));
+    $("form-title").textContent = "Update Your Listing";
+    $("form-sub").textContent   = "Your listing is live — edit or remove it below.";
+    $("btn-submit").textContent = "Update Listing";
+    show($("btn-delete"));
   } else {
-    el("form-title").textContent    = "Submit Your Swap Listing";
-    el("form-subtitle").textContent = "Your contact info will only be visible to signed-in BU students.";
-    el("submit-btn").textContent    = "Submit Listing";
-    hide(el("delete-btn"));
+    $("form-title").textContent = "Submit Your Swap Listing";
+    $("form-sub").textContent   = "Your listing is visible to everyone. Contact info is only shown to signed-in BU students.";
+    $("btn-submit").textContent = "Submit Listing";
+    hide($("btn-delete"));
   }
 }
 
-// ── Fetch Contacts (auth required) ────────────────────────────
+// ── Refresh contacts (only available to signed-in users) ──────
 async function refreshContacts() {
   if (!currentUser) { contactsMap = {}; return; }
   try {
@@ -322,90 +279,66 @@ async function refreshContacts() {
   } catch (_) { contactsMap = {}; }
 }
 
-// ── Real-Time Listings Listener ────────────────────────────────
-function startListingsListener() {
-  if (unsubListings) unsubListings();
-  const q = query(collection(db, "listings"), orderBy("submittedAt", "desc"));
-  unsubListings = onSnapshot(q,
-    (snap) => {
-      allListings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderTable();
-    },
-    (err) => {
-      console.error("Listings listener error:", err);
-      const tbody = el("listings-tbody");
-      if (tbody) tbody.innerHTML = `
-        <tr><td colspan="7" style="padding:2rem;text-align:center;color:#dc2626">
-          Error loading listings — check your Firestore rules.<br>
-          <small>${esc(err.message)}</small>
-        </td></tr>`;
-    }
-  );
-}
-
-// ── Render Table ───────────────────────────────────────────────
+// ── Render table ───────────────────────────────────────────────
 function renderTable() {
-  const tbody = el("listings-tbody");
+  const tbody = $("listings-tbody");
   if (!tbody) return;
 
-  const fGender    = el("filter-gender")?.value    || "";
-  const fBuilding  = el("filter-building")?.value  || "";
-  const fOccupancy = el("filter-occupancy")?.value || "";
-  const fRoommate  = el("filter-roommate")?.value  || "";
-  const fSort      = el("filter-sort")?.value      || "newest";
-  const fSearch    = (el("filter-search")?.value   || "").toLowerCase().trim();
+  const fSearch   = ($("fi-search")?.value  || "").toLowerCase().trim();
+  const fGender   = $("fi-gender")?.value   || "";
+  const fBuilding = $("fi-building")?.value || "";
+  const fType     = $("fi-type")?.value     || "";
+  const fOcc      = $("fi-occ")?.value      || "";
+  const fRoommate = $("fi-roommate")?.value || "";
+  const fSort     = $("fi-sort")?.value     || "newest";
 
-  // Exclude own listing
-  const myDocId = currentUser ? emailToDocId(currentUser.email) : null;
-  let list = allListings.filter(l => l.id !== myDocId);
+  const myId = currentUser?.uid;
+  let list = allListings.filter(l => l.id !== myId);
 
-  if (fGender)    list = list.filter(l => l.housingGender   === fGender);
-  if (fBuilding)  list = list.filter(l => l.currentBuilding === fBuilding);
-  if (fOccupancy) list = list.filter(l => l.occupancy       === fOccupancy);
+  if (fGender)   list = list.filter(l => l.housingGender   === fGender);
+  if (fBuilding) list = list.filter(l => l.currentBuilding === fBuilding);
+  if (fType)     list = list.filter(l => l.roomType        === fType);
+  if (fOcc)      list = list.filter(l => l.occupancy       === fOcc);
   if (fRoommate !== "") list = list.filter(l => String(l.bringingRoommate) === fRoommate);
-  if (fSearch) {
-    list = list.filter(l => {
-      const blob = [
-        l.currentBuilding, l.housingGender, l.occupancy,
-        l.pitch, l.otherDetails,
-        ...(l.wantedBuildings    || []),
-        ...(l.wantedGenders      || []),
-        ...(l.wantedOccupancies  || []),
-      ].join(" ").toLowerCase();
-      return blob.includes(fSearch);
-    });
-  }
+  if (fSearch)   list = list.filter(l =>
+    [l.currentBuilding, l.roomType, l.occupancy, l.housingGender,
+     l.pitch, l.otherDetails,
+     ...(l.wantedBuildings   || []),
+     ...(l.wantedTypes       || []),
+     ...(l.wantedOccupancies || []),
+     ...(l.wantedGenders     || []),
+    ].join(" ").toLowerCase().includes(fSearch)
+  );
 
-  if (fSort === "oldest") list = [...list].reverse();
-  else if (fSort === "building")
-    list = [...list].sort((a,b) => (a.currentBuilding||"").localeCompare(b.currentBuilding||""));
+  if (fSort === "oldest")   list = [...list].reverse();
+  if (fSort === "building") list = [...list].sort((a,b) =>
+    (a.currentBuilding||"").localeCompare(b.currentBuilding||"")
+  );
 
-  const countEl = el("listings-count");
-  if (countEl) countEl.textContent = `${list.length} listing${list.length !== 1 ? "s" : ""}`;
+  const rc = $("result-count");
+  if (rc) rc.textContent = `${list.length} listing${list.length !== 1 ? "s" : ""}`;
 
   if (!list.length) {
-    const filtered = fGender || fBuilding || fOccupancy || fRoommate || fSearch;
-    tbody.innerHTML = `<tr><td colspan="7">
-      <div class="empty-state">
-        <div class="empty-icon">🏠</div>
-        <p>${filtered ? "No listings match your filters." : "No listings yet — be the first to submit!"}</p>
-      </div>
+    const anyFilter = fSearch || fGender || fBuilding || fType || fOcc || fRoommate;
+    tbody.innerHTML = `<tr><td colspan="8" class="td-empty">
+      <div class="td-empty-icon">🏠</div>
+      <p>${anyFilter ? "No listings match your filters." : "No listings yet — be the first to submit!"}</p>
     </td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map(buildRow).join("");
-  // Wire up locked contact cells to open modal
-  tbody.querySelectorAll(".contact-locked").forEach(cell =>
-    cell.addEventListener("click", openModal)
+  tbody.querySelectorAll(".contact-locked").forEach(el =>
+    el.addEventListener("click", () => { showPanel("submit"); doSignIn(); })
   );
 }
 
 function buildRow(l) {
   const date = l.submittedAt?.toDate
-    ? l.submittedAt.toDate().toLocaleDateString("en-US",{month:"short",day:"numeric"})
+    ? l.submittedAt.toDate().toLocaleDateString("en-US", { month:"short", day:"numeric" })
     : "—";
   const wg = (l.wantedGenders     || []).join(", ") || "—";
+  const wt = (l.wantedTypes       || []).join(", ") || "—";
   const wo = (l.wantedOccupancies || []).join(", ") || "—";
   const wb = (l.wantedBuildings   || []).join(", ") || "—";
 
@@ -416,228 +349,197 @@ function buildRow(l) {
     const c = contactsMap[l.id] || {};
     const parts = [];
     if (l.email)          parts.push(`<a href="mailto:${esc(l.email)}" class="contact-link">${esc(l.email)}</a>`);
-    if (c.redditUsername) parts.push(`<small class="muted">${esc(c.redditUsername)}</small>`);
-    if (c.phone)          parts.push(`<small class="muted">${esc(c.phone)}</small>`);
-    if (c.otherContact)   parts.push(`<small class="muted">${esc(c.otherContact)}</small>`);
-    contactCell = parts.join("<br>") || "<span class='muted'>—</span>";
+    if (c.redditUsername) parts.push(`<small style="color:var(--sub)">${esc(c.redditUsername)}</small>`);
+    if (c.phone)          parts.push(`<small style="color:var(--sub)">${esc(c.phone)}</small>`);
+    if (c.otherContact)   parts.push(`<small style="color:var(--sub)">${esc(c.otherContact)}</small>`);
+    contactCell = parts.join("<br>") || `<span style="color:#aaa">—</span>`;
   }
 
   return `<tr>
-    <td><span class="badge">${esc(l.currentBuilding||"—")}</span></td>
-    <td class="muted">${esc(l.housingGender||"—")}</td>
-    <td class="muted">
+    <td><span class="badge badge-red">${esc(l.currentBuilding||"—")}</span></td>
+    <td class="td-sub">${esc(l.roomType||"—")}</td>
+    <td class="td-sub">
       ${esc(l.occupancy||"—")}
-      ${l.bringingRoommate ? `<br><span class="badge gold">+Roommate</span>` : ""}
+      ${l.bringingRoommate ? `<br><span class="badge badge-gold">+Roommate</span>` : ""}
     </td>
+    <td class="td-sub">${esc(l.housingGender||"—")}</td>
     <td>
-      <div>${esc(l.pitch||"—")}</div>
+      <div style="max-width:240px">${esc(l.pitch||"—")}</div>
       ${l.otherDetails
-        ? `<div style="font-size:.8rem;color:var(--muted);font-style:italic;margin-top:4px">${esc(l.otherDetails)}</div>`
+        ? `<div style="font-size:.8rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(l.otherDetails)}</div>`
         : ""}
     </td>
-    <td class="muted" style="font-size:.82rem;min-width:150px">
-      <div><b>Gender:</b> ${esc(wg)}</div>
-      <div><b>Occ.:</b> ${esc(wo)}</div>
-      <div><b>Bldgs:</b> ${esc(wb)}</div>
+    <td style="font-size:.82rem;min-width:160px;color:var(--sub)">
+      <div><b style="color:var(--text)">Gender:</b> ${esc(wg)}</div>
+      <div><b style="color:var(--text)">Type:</b> ${esc(wt)}</div>
+      <div><b style="color:var(--text)">Occ.:</b> ${esc(wo)}</div>
+      <div style="max-width:180px"><b style="color:var(--text)">Bldgs:</b> ${esc(wb)}</div>
     </td>
     <td style="min-width:140px">${contactCell}</td>
-    <td class="muted">${date}</td>
+    <td class="td-sub">${date}</td>
   </tr>`;
 }
 
-// ── Fill Form (edit mode) ──────────────────────────────────────
+function clearFilters() {
+  ["fi-gender","fi-building","fi-type","fi-occ","fi-roommate"].forEach(id => {
+    const e = $(id); if (e) e.value = "";
+  });
+  const s = $("fi-search"); if (s) s.value = "";
+  const so = $("fi-sort"); if (so) so.value = "newest";
+  renderTable();
+}
+
+// ── Fill form (edit mode) ──────────────────────────────────────
 function fillForm(listing, contact) {
-  el("f-gender").value    = listing.housingGender   || "";
-  el("f-building").value  = listing.currentBuilding || "";
-  el("f-occupancy").value = listing.occupancy       || "";
+  $("f-gender").value   = listing.housingGender   || "";
+  $("f-building").value = listing.currentBuilding || "";
+  $("f-type").value     = listing.roomType        || "";
+  $("f-occ").value      = listing.occupancy       || "";
 
-  document.querySelectorAll("[name='f-roommate']").forEach(r => {
-    r.checked = r.value === String(listing.bringingRoommate);
-  });
+  document.querySelectorAll("[name='f-roommate']").forEach(r =>
+    r.checked = r.value === String(listing.bringingRoommate)
+  );
 
-  el("f-pitch").value   = listing.pitch        || "";
-  el("pitch-count").textContent   = (listing.pitch  || "").length;
-  el("f-details").value = listing.otherDetails || "";
-  el("details-count").textContent = (listing.otherDetails || "").length;
+  $("f-pitch").value          = listing.pitch        || "";
+  $("ct-pitch").textContent   = (listing.pitch  || "").length;
+  $("f-details").value        = listing.otherDetails || "";
+  $("ct-details").textContent = (listing.otherDetails || "").length;
 
-  document.querySelectorAll("[name='wanted-gender']").forEach(cb => {
-    cb.checked = (listing.wantedGenders    || []).includes(cb.value);
-  });
-  document.querySelectorAll("[name='wanted-building']").forEach(cb => {
-    cb.checked = (listing.wantedBuildings  || []).includes(cb.value);
-  });
-  document.querySelectorAll("[name='wanted-occupancy']").forEach(cb => {
-    cb.checked = (listing.wantedOccupancies|| []).includes(cb.value);
-  });
+  document.querySelectorAll("[name='wg']").forEach(cb =>
+    cb.checked = (listing.wantedGenders     || []).includes(cb.value)
+  );
+  document.querySelectorAll("[name='wt']").forEach(cb =>
+    cb.checked = (listing.wantedTypes       || []).includes(cb.value)
+  );
+  document.querySelectorAll("[name='wo']").forEach(cb =>
+    cb.checked = (listing.wantedOccupancies || []).includes(cb.value)
+  );
+  document.querySelectorAll("[name='wb']").forEach(cb =>
+    cb.checked = (listing.wantedBuildings   || []).includes(cb.value)
+  );
 
-  el("f-reddit").value = contact.redditUsername || "";
-  el("f-phone").value  = contact.phone         || "";
-  el("f-other").value  = contact.otherContact  || "";
+  $("f-reddit").value = contact.redditUsername || "";
+  $("f-phone").value  = contact.phone          || "";
+  $("f-other").value  = contact.otherContact   || "";
 }
 
-// ── Reset Form ─────────────────────────────────────────────────
+// ── Reset form ─────────────────────────────────────────────────
 function resetForm() {
-  el("listing-form")?.reset();
-  document.querySelectorAll("#listing-form input[type='checkbox'], #listing-form input[type='radio']")
+  $("the-form")?.reset();
+  document.querySelectorAll("#the-form input[type='checkbox'], #the-form input[type='radio']")
     .forEach(i => i.checked = false);
-  el("pitch-count").textContent   = "0";
-  el("details-count").textContent = "0";
-  el("form-title").textContent    = "Submit Your Swap Listing";
-  el("form-subtitle").textContent = "Your contact info will only be visible to signed-in BU students.";
-  el("submit-btn").textContent    = "Submit Listing";
-  show(el("f-email-wrap"));
-  hide(el("f-email-display"));
-  hide(el("delete-btn"));
-  setErr("form-error", "");
-  setMsg("submit-success", "");
+  $("ct-pitch").textContent   = "0";
+  $("ct-details").textContent = "0";
+  $("form-title").textContent = "Submit Your Swap Listing";
+  $("form-sub").textContent   = "Your listing is visible to everyone. Contact info is only shown to signed-in BU students.";
+  $("btn-submit").textContent = "Submit Listing";
+  hide($("btn-delete"));
+  setErr("form-err", "");
+  setMsg("success-msg", "");
 }
 
-// ── Form Submit ────────────────────────────────────────────────
+// ── Submit / Update ────────────────────────────────────────────
 async function handleSubmit(e) {
   e.preventDefault();
-  setErr("form-error", "");
-  setMsg("submit-success", "");
+  if (!currentUser) return;
 
-  // Determine email
-  let email = "";
-  if (currentUser) {
-    email = currentUser.email;
-  } else {
-    email = (el("f-email")?.value || "").trim().toLowerCase();
-    if (!email)                     return setErr("form-error", "Enter your BU email.");
-    if (!email.endsWith("@bu.edu")) return setErr("form-error", "Must be a @bu.edu email address.");
-  }
+  setErr("form-err", "");
+  setMsg("success-msg", "");
 
-  // Collect form values
-  const housingGender     = el("f-gender").value;
-  const currentBuilding   = el("f-building").value;
-  const occupancy         = el("f-occupancy").value;
-  const roommateEl        = document.querySelector("[name='f-roommate']:checked");
-  const pitch             = el("f-pitch").value.trim();
-  const otherDetails      = el("f-details").value.trim();
-  const wantedGenders     = getChecked("wanted-gender");
-  const wantedBuildings   = getChecked("wanted-building");
-  const wantedOccupancies = getChecked("wanted-occupancy");
-  const reddit = el("f-reddit").value.trim();
-  const phone  = el("f-phone").value.trim();
-  const other  = el("f-other").value.trim();
+  const housingGender   = $("f-gender").value;
+  const currentBuilding = $("f-building").value;
+  const roomType        = $("f-type").value;
+  const occupancy       = $("f-occ").value;
+  const roommateEl      = document.querySelector("[name='f-roommate']:checked");
+  const pitch           = $("f-pitch").value.trim();
+  const otherDetails    = $("f-details").value.trim();
+  const wantedGenders     = getChecked("wg");
+  const wantedTypes       = getChecked("wt");
+  const wantedOccupancies = getChecked("wo");
+  const wantedBuildings   = getChecked("wb");
+  const reddit = $("f-reddit").value.trim();
+  const phone  = $("f-phone").value.trim();
+  const other  = $("f-other").value.trim();
 
-  // Validate
-  if (!housingGender)            return setErr("form-error","Select your housing assignment gender.");
-  if (!currentBuilding)          return setErr("form-error","Select your current building.");
-  if (!occupancy)                return setErr("form-error","Select your room occupancy.");
-  if (!roommateEl)               return setErr("form-error","Indicate whether you're bringing a roommate.");
-  if (!pitch)                    return setErr("form-error","Add a pitch for your room.");
-  if (!wantedGenders.length)     return setErr("form-error","Select at least one gender housing preference.");
-  if (!wantedBuildings.length)   return setErr("form-error","Select at least one building you'd consider.");
-  if (!wantedOccupancies.length) return setErr("form-error","Select at least one occupancy you'd consider.");
-  if (!reddit && !phone && !other) return setErr("form-error","Add at least one contact method.");
+  if (!housingGender)            return setErr("form-err","Select your housing assignment gender.");
+  if (!currentBuilding)          return setErr("form-err","Select your current building.");
+  if (!roomType)                 return setErr("form-err","Select your room type.");
+  if (!occupancy)                return setErr("form-err","Select your room occupancy.");
+  if (!roommateEl)               return setErr("form-err","Indicate whether you're bringing a roommate.");
+  if (!pitch)                    return setErr("form-err","Describe your room's best features.");
+  if (!wantedGenders.length)     return setErr("form-err","Select at least one gender housing preference.");
+  if (!wantedTypes.length)       return setErr("form-err","Select at least one room type you'd consider.");
+  if (!wantedOccupancies.length) return setErr("form-err","Select at least one occupancy you'd consider.");
+  if (!wantedBuildings.length)   return setErr("form-err","Select at least one building you'd consider.");
+  if (!reddit && !phone && !other) return setErr("form-err","Add at least one contact method beyond your BU email.");
 
-  const btn = el("submit-btn");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  const btn = $("btn-submit");
+  btn.disabled = true; btn.textContent = "Saving…";
 
-  const docId      = emailToDocId(email);
-  const listingRef = doc(db, "listings", docId);
-  const contactRef = doc(db, "contacts",  docId);
+  const isNew      = !hasListing;
+  const listingRef = doc(db, "listings", currentUser.uid);
+  const contactRef = doc(db, "contacts",  currentUser.uid);
+  const now        = serverTimestamp();
 
   try {
-    const existingSnap  = await getDoc(listingRef);
-    const alreadyExists = existingSnap.exists();
-
-    // Block unauthenticated users from overwriting existing listings
-    if (!currentUser && alreadyExists) {
-      setErr("form-error", "A listing with this email already exists. Sign in with your BU email to edit it.");
-      btn.disabled = false;
-      btn.textContent = "Submit Listing";
-      return;
-    }
-
-    const now = serverTimestamp();
     const listingData = {
-      email, housingGender, currentBuilding, occupancy,
+      email: currentUser.email,
+      housingGender, currentBuilding, roomType, occupancy,
       bringingRoommate: roommateEl.value === "true",
       pitch, otherDetails,
-      wantedGenders, wantedBuildings, wantedOccupancies,
+      wantedGenders, wantedTypes, wantedOccupancies, wantedBuildings,
       updatedAt: now,
-      ...(!alreadyExists && { submittedAt: now }),
-    };
-    const contactData = {
-      email,
-      redditUsername: reddit,
-      phone,
-      otherContact: other,
-      updatedAt: now,
+      ...(isNew && { submittedAt: now }),
     };
 
     const batch = writeBatch(db);
-    alreadyExists
-      ? batch.update(listingRef, listingData)
-      : batch.set(listingRef, listingData);
-    batch.set(contactRef, contactData, { merge: true });
+    isNew ? batch.set(listingRef, listingData) : batch.update(listingRef, listingData);
+    batch.set(contactRef, {
+      email: currentUser.email,
+      redditUsername: reddit, phone, otherContact: other,
+      updatedAt: now,
+    }, { merge: true });
     await batch.commit();
 
-    if (currentUser) {
-      hasListing = true;
-      el("form-title").textContent    = "Update Your Listing";
-      el("form-subtitle").textContent = "Your listing is live — update or remove it below.";
-      el("submit-btn").textContent    = "Update Listing";
-      show(el("delete-btn"));
-      await refreshContacts();
-      renderTable();
-      setMsg("submit-success", "✅ Listing updated!");
-    } else {
-      // Reset for next person
-      el("listing-form").reset();
-      document.querySelectorAll("#listing-form input[type='checkbox'], #listing-form input[type='radio']")
-        .forEach(i => i.checked = false);
-      el("pitch-count").textContent   = "0";
-      el("details-count").textContent = "0";
+    hasListing = true;
+    $("form-title").textContent = "Update Your Listing";
+    $("form-sub").textContent   = "Your listing is live — edit or remove it below.";
+    show($("btn-delete"));
 
-      setMsg("submit-success",
-        `🎉 Listing submitted! Want to edit it later?
-         <button id="post-signin-btn" class="btn-inline" style="margin-left:8px">Sign In →</button>`
-      );
-      el("post-signin-btn")?.addEventListener("click", openModal);
-    }
+    await refreshContacts();
+    renderTable();
+
+    setMsg("success-msg", isNew
+      ? "🎉 Listing submitted! Other signed-in BU students can now see your contact info."
+      : "✅ Your listing has been updated!"
+    );
 
   } catch (err) {
     console.error("Submit error:", err);
-    setErr("form-error", `Save failed: ${err.code || err.message} — check your Firestore rules.`);
+    setErr("form-err", `Save failed (${err.code || err.message}) — check your Firestore rules.`);
   } finally {
     btn.disabled = false;
-    btn.textContent = (currentUser && hasListing) ? "Update Listing" : "Submit Listing";
+    btn.textContent = hasListing ? "Update Listing" : "Submit Listing";
   }
 }
 
-// ── Delete Listing ─────────────────────────────────────────────
+// ── Delete ─────────────────────────────────────────────────────
 async function handleDelete() {
   if (!currentUser) return;
-  if (!confirm("Remove your listing? You'll no longer appear in the database.")) return;
-
-  const docId = emailToDocId(currentUser.email);
+  if (!confirm("Remove your listing? You'll no longer appear in the swap database.")) return;
 
   try {
     const batch = writeBatch(db);
-    batch.delete(doc(db, "listings", docId));
-    batch.delete(doc(db, "contacts",  docId));
+    batch.delete(doc(db, "listings", currentUser.uid));
+    batch.delete(doc(db, "contacts",  currentUser.uid));
     await batch.commit();
 
     hasListing  = false;
     contactsMap = {};
-    allListings = allListings.filter(l => l.id !== docId);
-
+    allListings = allListings.filter(l => l.id !== currentUser.uid);
     renderTable();
     resetForm();
-
-    // Still signed in — keep email display
-    hide(el("f-email-wrap"));
-    show(el("f-email-display"));
-    if (el("f-email-display")) el("f-email-display").textContent = `✉️ ${currentUser.email}`;
-    hide(el("edit-notice")); // still signed in, no need to sign in again
-
-    setMsg("submit-success", "Your listing has been removed.");
-
+    setMsg("success-msg", "Your listing has been removed.");
   } catch (err) {
     console.error("Delete error:", err);
     alert("Failed to delete. Please try again.");

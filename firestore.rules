@@ -2,31 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Listings ─────────────────────────────────────────────
-    // Public to read. Anyone with a @bu.edu email can create.
-    // Only the authenticated owner can update or delete.
-    match /listings/{docId} {
+    // Listings — anyone can read, only @bu.edu Google users can write their own
+    match /listings/{userId} {
       allow read: if true;
 
-      allow create: if request.resource.data.email is string
-                    && request.resource.data.email.matches(".*@bu\\.edu");
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.auth.token.email.matches(".*@bu\\.edu");
 
       allow update, delete: if request.auth != null
-                            && request.auth.token.email == resource.data.email;
+                            && request.auth.uid == userId;
     }
 
-    // ── Contacts ─────────────────────────────────────────────
-    // Only signed-in users can read.
-    // Anyone with a @bu.edu email can create (initial submission).
-    // Only the authenticated owner can update or delete.
-    match /contacts/{docId} {
-      allow read: if request.auth != null;
+    // Contacts — only signed-in @bu.edu users can read, owner can write
+    match /contacts/{userId} {
+      allow read: if request.auth != null
+                  && request.auth.token.email.matches(".*@bu\\.edu");
 
-      allow create: if request.resource.data.email is string
-                    && request.resource.data.email.matches(".*@bu\\.edu");
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.auth.token.email.matches(".*@bu\\.edu");
 
       allow update, delete: if request.auth != null
-                            && request.auth.token.email == resource.data.email;
+                            && request.auth.uid == userId;
     }
   }
 }

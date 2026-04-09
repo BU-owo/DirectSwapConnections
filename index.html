@@ -13,17 +13,21 @@
 <!-- NAV -->
 <nav>
   <div class="nav-brand">Direct Swap <span>Connections</span></div>
-  <div class="nav-tabs">
-    <button class="nav-tab" data-show="submit">Submit Listing</button>
-    <button class="nav-tab active" data-show="browse">Browse Listings</button>
+  <div class="nav-center">
+    <button class="nav-tab" data-panel="submit">Submit Listing</button>
+    <button class="nav-tab active" data-panel="browse">Browse Listings</button>
   </div>
-  <div class="nav-right">
-    <div id="auth-out">
-      <button id="open-signin" class="btn-nav-signin">Sign In</button>
+  <div class="nav-end">
+    <div id="state-out">
+      <button id="btn-signin-nav" class="btn-google-nav">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign In
+      </button>
     </div>
-    <div id="auth-in" class="hidden">
+    <div id="state-in" class="hidden">
+      <img id="nav-avatar" class="nav-avatar" src="" alt="" />
       <span id="nav-email" class="nav-email-text"></span>
-      <button id="signout-btn" class="btn-nav-signout">Sign Out</button>
+      <button id="btn-signout" class="btn-nav-signout">Sign Out</button>
     </div>
   </div>
 </nav>
@@ -33,207 +37,222 @@
   <h1>BU Housing<br><em>Direct Swaps</em></h1>
   <p>Find your perfect room swap. Submit your listing, browse others, and connect with fellow Terriers.</p>
   <div class="hero-actions">
-    <button class="hero-cta-primary" data-show="submit">📝 Submit a Listing</button>
-    <button class="hero-cta-ghost"   data-show="browse">🔍 Browse Listings</button>
+    <button class="hero-cta-white" data-panel="submit">📝 Submit a Listing</button>
+    <button class="hero-cta-ghost" data-panel="browse">🔍 Browse Listings</button>
   </div>
-  <div class="hero-badge"><span class="dot"></span> BU students only — @bu.edu verified</div>
+  <div class="hero-pill"><span class="pill-dot"></span> BU students only — Google @bu.edu verified</div>
 </div>
 
 <main>
 
-  <!-- ══ BROWSE PANEL (default) ═══════════════════════════════ -->
+  <!-- ══ BROWSE (default) ══════════════════════════════════════ -->
   <div id="panel-browse" class="panel">
 
-    <div id="contact-banner" class="banner-signin hidden">
-      🔒 <strong>Sign in with your BU email to see contact info.</strong>
-      <button id="banner-signin-btn" class="btn-inline">Sign In →</button>
+    <div id="notice-contact" class="notice-bar">
+      🔒 <strong>Sign in with your BU Google account</strong> to see contact info.
+      <button class="btn-notice" data-action="signin">Sign In →</button>
     </div>
 
-    <div class="listings-header">
+    <div class="panel-top">
       <div>
-        <div class="listings-title">Active Swap Listings</div>
-        <div id="listings-count" class="listings-count">Loading…</div>
+        <h2 class="panel-title">Active Swap Listings</h2>
+        <p id="result-count" class="result-count">Loading…</p>
       </div>
-      <button class="btn-primary-sm" data-show="submit">+ Submit My Listing</button>
+      <button class="btn-red-sm" data-panel="submit">+ Submit Mine</button>
     </div>
 
-    <div class="filter-bar">
-      <label>Filter:</label>
-      <input id="filter-search" class="search-input" type="text" placeholder="Search building, details…" />
-      <select id="filter-gender">
+    <div class="filter-row">
+      <input id="fi-search"   class="fi-search"  type="text" placeholder="Search building, pitch text…" />
+      <select id="fi-gender">
         <option value="">All genders</option>
         <option>Men's</option><option>Women's</option><option>Gender Inclusive</option>
       </select>
-      <select id="filter-building"><option value="">All buildings</option></select>
-      <select id="filter-occupancy"><option value="">All occupancies</option></select>
-      <select id="filter-roommate">
+      <select id="fi-building"><option value="">All buildings</option></select>
+      <select id="fi-type">
+        <option value="">All types</option>
+        <option>Dorm</option><option>Dorm Suite</option><option>Apartment Suite</option><option>Apartment</option>
+      </select>
+      <select id="fi-occ"><option value="">All occupancies</option></select>
+      <select id="fi-roommate">
         <option value="">Roommate: any</option>
-        <option value="true">Bringing roommate</option>
+        <option value="true">Bringing +1</option>
         <option value="false">Not bringing</option>
       </select>
-      <label>Sort:</label>
-      <select id="filter-sort">
-        <option value="newest">Newest</option>
-        <option value="oldest">Oldest</option>
+      <select id="fi-sort">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
         <option value="building">Building A–Z</option>
       </select>
-      <button id="clear-filters" class="btn-ghost-sm">Clear</button>
+      <button id="btn-clear" class="btn-ghost-xs">✕ Clear</button>
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Building</th>
-            <th>Gender</th>
-            <th>Occupancy</th>
-            <th>Room Pitch</th>
-            <th>Looking For</th>
-            <th>Contact</th>
-            <th>Posted</th>
+            <th>Building</th><th>Type</th><th>Occupancy</th><th>Gender</th>
+            <th>Room Pitch</th><th>Looking For</th><th>Contact</th><th>Posted</th>
           </tr>
         </thead>
         <tbody id="listings-tbody">
-          <tr><td colspan="7" class="loading">Loading listings…</td></tr>
+          <tr><td colspan="8" class="td-loading">Loading listings…</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ══ SUBMIT PANEL ═════════════════════════════════════════ -->
+  <!-- ══ SUBMIT ════════════════════════════════════════════════ -->
   <div id="panel-submit" class="panel hidden">
 
-    <div id="edit-notice" class="banner-gold">
-      Already submitted a listing?
-      <button id="edit-signin-btn" class="btn-inline">Sign in to edit it →</button>
+    <!-- Not signed in -->
+    <div id="submit-gate" class="gate-wrap">
+      <div class="gate-card">
+        <div class="gate-icon">🏠</div>
+        <h2 class="gate-title">Submit or Manage Your Listing</h2>
+        <p class="gate-desc">Sign in with your BU Google account to post a listing, or to edit one you've already submitted.</p>
+        <button class="btn-google-lg" data-action="signin">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink:0"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign in with Google
+        </button>
+        <p class="gate-note">Must use a @bu.edu email to continue.</p>
+        <div id="gate-error" class="msg msg-error hidden"></div>
+      </div>
     </div>
 
-    <div id="submit-success" class="msg msg-success hidden" style="margin-bottom:1.5rem"></div>
+    <!-- Signed in — form -->
+    <div id="submit-form" class="hidden">
+      <div id="success-msg" class="msg msg-success hidden" style="margin-bottom:1.5rem;max-width:800px"></div>
 
-    <div class="card form-card">
-      <div id="form-title"    class="card-title">Submit Your Swap Listing</div>
-      <div id="form-subtitle" class="card-sub">Your contact info will only be visible to signed-in BU students.</div>
-
-      <form id="listing-form" novalidate>
-
-        <!-- Email section -->
-        <div class="form-section">
-          <div class="form-section-label">Your BU Email</div>
-          <div id="f-email-wrap" class="field">
-            <label>BU Email Address <span class="req">*</span></label>
-            <input type="email" id="f-email" placeholder="terrier@bu.edu" autocomplete="email" />
+      <div class="form-card">
+        <div class="form-card-head">
+          <div>
+            <h2 id="form-title" class="form-title">Submit Your Swap Listing</h2>
+            <p id="form-sub"   class="form-sub">Your listing is visible to everyone. Contact info is only shown to signed-in BU students.</p>
           </div>
-          <div id="f-email-display" class="email-display hidden"></div>
+          <div class="user-pill" id="user-pill">
+            <img id="pill-avatar" class="pill-avatar" src="" alt="" />
+            <span id="pill-email" class="pill-email"></span>
+          </div>
         </div>
 
-        <!-- Current housing -->
-        <div class="form-section">
-          <div class="form-section-label">📍 Your Current Housing</div>
-          <div class="form-grid">
+        <form id="the-form" novalidate>
 
-            <div class="field">
-              <label>Housing Assignment Gender <span class="req">*</span></label>
-              <select id="f-gender" required>
-                <option value="">Select...</option>
-                <option>Men's</option><option>Women's</option><option>Gender Inclusive</option>
-              </select>
+          <!-- Current housing -->
+          <section class="fsec">
+            <h3 class="fsec-title">📍 Your Current Housing</h3>
+            <div class="fgrid">
+
+              <div class="ffield">
+                <label for="f-gender">Housing Assignment Gender <span class="req">*</span></label>
+                <select id="f-gender" required>
+                  <option value="">Select…</option>
+                  <option>Men's</option><option>Women's</option><option>Gender Inclusive</option>
+                </select>
+              </div>
+
+              <div class="ffield">
+                <label for="f-building">Current Building <span class="req">*</span></label>
+                <select id="f-building" required><option value="">Select building…</option></select>
+              </div>
+
+              <div class="ffield">
+                <label for="f-type">Room Type <span class="req">*</span></label>
+                <select id="f-type" required>
+                  <option value="">Select type…</option>
+                  <option>Dorm</option><option>Dorm Suite</option>
+                  <option>Apartment Suite</option><option>Apartment</option>
+                </select>
+              </div>
+
+              <div class="ffield">
+                <label for="f-occ">Occupancy <span class="req">*</span></label>
+                <select id="f-occ" required><option value="">Select occupancy…</option></select>
+              </div>
+
+              <div class="ffield">
+                <label>Bringing a Roommate? <span class="req">*</span></label>
+                <div class="radio-row">
+                  <label class="radio-opt"><input type="radio" name="f-roommate" value="true"> Yes</label>
+                  <label class="radio-opt"><input type="radio" name="f-roommate" value="false"> No</label>
+                </div>
+              </div>
+
+              <div class="ffield full">
+                <label for="f-pitch">Your Room's Best Features <span class="req">*</span> <em class="hint">Public — sell it!</em></label>
+                <p class="fhint">Kitchen, view, private bath, quiet floor, female-only floor, close to campus, etc.</p>
+                <textarea id="f-pitch" rows="3" maxlength="500" placeholder="e.g. Private bathroom, amazing Charles River view, steps from the Green Line…" required></textarea>
+                <span class="counter"><span id="ct-pitch">0</span>/500</span>
+              </div>
+
+              <div class="ffield full">
+                <label for="f-details">Other Details <em class="hint">Optional</em></label>
+                <textarea id="f-details" rows="2" maxlength="300" placeholder="Anything else worth knowing…"></textarea>
+                <span class="counter"><span id="ct-details">0</span>/300</span>
+              </div>
+
             </div>
+          </section>
 
-            <div class="field">
-              <label>Current Building <span class="req">*</span></label>
-              <select id="f-building" required>
-                <option value="">Select building...</option>
-              </select>
+          <!-- Looking for -->
+          <section class="fsec">
+            <h3 class="fsec-title">🔍 What You're Looking For</h3>
+            <div class="fgrid">
+
+              <div class="ffield">
+                <label>Gender Housing <span class="req">*</span> <em class="hint">All that apply</em></label>
+                <div class="checks-inline" id="w-gender"></div>
+              </div>
+
+              <div class="ffield">
+                <label>Room Types <span class="req">*</span> <em class="hint">All that apply</em></label>
+                <div class="checks-inline" id="w-type"></div>
+              </div>
+
+              <div class="ffield full">
+                <label>Occupancies <span class="req">*</span> <em class="hint">All that apply</em></label>
+                <div class="checks-inline checks-row" id="w-occ"></div>
+              </div>
+
+              <div class="ffield full">
+                <label>Buildings You'd Consider <span class="req">*</span></label>
+                <div class="checks-toolbar">
+                  <button type="button" id="btn-sel-all" class="btn-ghost-xs">Select All</button>
+                  <button type="button" id="btn-clr-all" class="btn-ghost-xs">Clear</button>
+                </div>
+                <div class="checks-scroll" id="w-building"></div>
+              </div>
+
             </div>
+          </section>
 
-            <div class="field">
-              <label>Room Occupancy <span class="req">*</span></label>
-              <select id="f-occupancy" required>
-                <option value="">Select...</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label>Bringing a Roommate? <span class="req">*</span></label>
-              <div class="radio-group">
-                <label class="radio-label"><input type="radio" name="f-roommate" value="true"> Yes</label>
-                <label class="radio-label"><input type="radio" name="f-roommate" value="false"> No</label>
+          <!-- Contact -->
+          <section class="fsec">
+            <h3 class="fsec-title">📬 Contact Info</h3>
+            <p class="fhint" style="margin-bottom:1rem">Only visible to signed-in BU students. Your BU email is included automatically — add at least one other way to reach you.</p>
+            <div class="fgrid">
+              <div class="ffield">
+                <label for="f-reddit">Reddit Username</label>
+                <input type="text" id="f-reddit" placeholder="u/yourname" />
+              </div>
+              <div class="ffield">
+                <label for="f-phone">Phone Number</label>
+                <input type="tel" id="f-phone" placeholder="617-555-0123" />
+              </div>
+              <div class="ffield full">
+                <label for="f-other">Other <em class="hint">Instagram, Discord, Snapchat, etc.</em></label>
+                <input type="text" id="f-other" placeholder="@yourhandle" />
               </div>
             </div>
+          </section>
 
-            <div class="field full">
-              <label>Pitch Your Room 🏠 <span class="req">*</span> <span class="hint">Public — sell it!</span></label>
-              <p class="field-hint">Kitchen, view, private bath, quiet floor, female-only floor, close to campus, etc.</p>
-              <textarea id="f-pitch" rows="3" maxlength="500" placeholder="e.g. Private bathroom, amazing Charles River view, steps from the Green Line…" required></textarea>
-              <span class="char-counter"><span id="pitch-count">0</span>/500</span>
-            </div>
-
-            <div class="field full">
-              <label>Other Details <span class="hint">Optional</span></label>
-              <textarea id="f-details" rows="2" maxlength="300" placeholder="Anything else worth knowing…"></textarea>
-              <span class="char-counter"><span id="details-count">0</span>/300</span>
-            </div>
-
+          <div class="form-actions">
+            <button type="submit" id="btn-submit" class="btn-red">Submit Listing</button>
+            <button type="button" id="btn-delete" class="btn-danger hidden">Remove My Listing</button>
           </div>
-        </div>
+          <div id="form-err" class="msg msg-error hidden" style="margin-top:1rem"></div>
 
-        <!-- Looking for -->
-        <div class="form-section">
-          <div class="form-section-label">🔍 What You're Looking For</div>
-          <div class="form-grid">
-
-            <div class="field">
-              <label>Gender Housing <span class="req">*</span> <span class="hint">All that apply</span></label>
-              <div class="check-inline" id="wanted-genders-wrap"></div>
-            </div>
-
-            <div class="field">
-              <label>Occupancies <span class="req">*</span> <span class="hint">All that apply</span></label>
-              <div class="check-inline" id="wanted-occupancies-wrap"></div>
-            </div>
-
-            <div class="field full">
-              <label>Buildings <span class="req">*</span></label>
-              <div class="check-toolbar">
-                <button type="button" id="sel-all-bldgs" class="btn-ghost-sm">Select All</button>
-                <button type="button" id="clr-all-bldgs" class="btn-ghost-sm">Clear</button>
-              </div>
-              <div class="check-scroll" id="wanted-buildings-wrap"></div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Contact info -->
-        <div class="form-section">
-          <div class="form-section-label">
-            📬 Contact Info
-            <span class="hint" style="display:block;margin-top:3px">Only visible to signed-in users — add at least one beyond your BU email</span>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>Reddit Username</label>
-              <input type="text" id="f-reddit" placeholder="u/yourname" />
-            </div>
-            <div class="field">
-              <label>Phone Number</label>
-              <input type="tel" id="f-phone" placeholder="617-555-0123" />
-            </div>
-            <div class="field full">
-              <label>Other <span class="hint">Instagram, Discord, Snapchat, etc.</span></label>
-              <input type="text" id="f-other" placeholder="e.g. @yourhandle on Instagram" />
-            </div>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" id="submit-btn" class="btn-primary" style="width:auto;padding:12px 36px">Submit Listing</button>
-          <button type="button" id="delete-btn" class="btn-danger hidden" style="padding:12px 28px">Remove Listing</button>
-        </div>
-
-        <div id="form-error" class="msg msg-error hidden" style="margin-top:14px"></div>
-
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -242,31 +261,6 @@
 <footer>
   BU Direct Swap Connections &nbsp;•&nbsp; For BU students only &nbsp;•&nbsp; Contact info protected 🔒
 </footer>
-
-<!-- SIGN IN MODAL -->
-<div id="signin-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <button id="modal-close" class="modal-close" aria-label="Close">×</button>
-    <div class="modal-title">Sign In with BU Email</div>
-    <p class="modal-sub">No password needed — we'll send a magic link to your inbox.</p>
-
-    <div id="modal-form">
-      <div class="field" style="margin-bottom:1rem">
-        <label>BU Email Address</label>
-        <input id="modal-email" type="email" placeholder="terrier@bu.edu" autocomplete="email" />
-      </div>
-      <button id="modal-send-btn" class="btn-primary">Send Magic Link</button>
-      <div id="modal-error" class="msg msg-error hidden" style="margin-top:12px"></div>
-    </div>
-
-    <div id="modal-sent" class="hidden">
-      <div class="msg msg-success">
-        📬 Link sent to <strong id="modal-sent-email"></strong>.<br>
-        Check your BU inbox and click the link to sign in.
-      </div>
-    </div>
-  </div>
-</div>
 
 <script type="module" src="app.js"></script>
 </body>
