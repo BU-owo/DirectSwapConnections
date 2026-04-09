@@ -7,6 +7,19 @@ let callbacks = {
   onFiltersChanged: () => {},
 };
 
+const normalizeValue = (value) => String(value ?? "").trim().toLowerCase();
+
+function getListingTimestampMs(listing) {
+  const timestamp = listing.submittedAt ?? listing.updatedAt;
+
+  if (!timestamp) return 0;
+  if (typeof timestamp.toMillis === "function") return timestamp.toMillis();
+  if (typeof timestamp.seconds === "number") return timestamp.seconds * 1000;
+
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
 export function setUiCallbacks(nextCallbacks) {
   callbacks = { ...callbacks, ...nextCallbacks };
 }
@@ -90,7 +103,10 @@ export function clearFilters() {
   hide($("fi-search-clear"));
 
   const sort = $("fi-sort");
-  if (sort) sort.value = "newest";
+  if (sort) {
+    sort.value = "newest";
+    sort.classList.remove("f-active");
+  }
 
   hide($("active-badge"));
   callbacks.onFiltersChanged();
@@ -150,21 +166,21 @@ export function renderTable() {
   const tbody = $("listings-tbody");
   if (!tbody) return;
 
-  const searchValue = ($("fi-search")?.value || "").trim().toLowerCase();
-  const filterGender = $("fi-gender")?.value || "";
-  const filterBuilding = $("fi-building")?.value || "";
-  const filterType = $("fi-type")?.value || "";
-  const filterOccupancy = $("fi-occ")?.value || "";
+  const searchValue = normalizeValue($("fi-search")?.value || "");
+  const filterGender = normalizeValue($("fi-gender")?.value || "");
+  const filterBuilding = normalizeValue($("fi-building")?.value || "");
+  const filterType = normalizeValue($("fi-type")?.value || "");
+  const filterOccupancy = normalizeValue($("fi-occ")?.value || "");
   const filterRoommate = $("fi-roommate")?.value || "";
   const filterSort = $("fi-sort")?.value || "newest";
 
   const myId = state.currentUser?.uid;
   let list = state.allListings.filter((listing) => listing.id !== myId);
 
-  if (filterGender) list = list.filter((listing) => listing.housingGender === filterGender);
-  if (filterBuilding) list = list.filter((listing) => listing.currentBuilding === filterBuilding);
-  if (filterType) list = list.filter((listing) => listing.roomType === filterType);
-  if (filterOccupancy) list = list.filter((listing) => listing.occupancy === filterOccupancy);
+  if (filterGender) list = list.filter((listing) => normalizeValue(listing.housingGender) === filterGender);
+  if (filterBuilding) list = list.filter((listing) => normalizeValue(listing.currentBuilding) === filterBuilding);
+  if (filterType) list = list.filter((listing) => normalizeValue(listing.roomType) === filterType);
+  if (filterOccupancy) list = list.filter((listing) => normalizeValue(listing.occupancy) === filterOccupancy);
   if (filterRoommate !== "") list = list.filter((listing) => String(listing.bringingRoommate) === filterRoommate);
 
   if (searchValue) {
@@ -188,9 +204,18 @@ export function renderTable() {
     });
   }
 
-  if (filterSort === "oldest") list = [...list].reverse();
+  if (filterSort === "newest") {
+    list = [...list].sort((a, b) => getListingTimestampMs(b) - getListingTimestampMs(a));
+  }
+  if (filterSort === "oldest") {
+    list = [...list].sort((a, b) => getListingTimestampMs(a) - getListingTimestampMs(b));
+  }
   if (filterSort === "building") {
-    list = [...list].sort((a, b) => (a.currentBuilding || "").localeCompare(b.currentBuilding || ""));
+    list = [...list].sort((a, b) => {
+      const byBuilding = normalizeValue(a.currentBuilding).localeCompare(normalizeValue(b.currentBuilding));
+      if (byBuilding !== 0) return byBuilding;
+      return getListingTimestampMs(b) - getListingTimestampMs(a);
+    });
   }
 
   const totalListings = state.allListings.filter((listing) => listing.id !== myId).length;
@@ -254,14 +279,14 @@ function buildRow(listing) {
   }
 
   return `<tr>
-    <td><span class="badge badge-red">${esc(listing.currentBuilding || "—")}</span></td>
-    <td class="td-sub">${esc(listing.roomType || "—")}</td>
-    <td class="td-sub">
+    <td data-label="Building"><span class="badge badge-red">${esc(listing.currentBuilding || "—")}</span></td>
+    <td data-label="Type" class="td-sub">${esc(listing.roomType || "—")}</td>
+    <td data-label="Occupancy" class="td-sub">
       ${esc(listing.occupancy || "—")}
       ${listing.bringingRoommate ? `<br><span class="badge badge-gold" style="margin-top:4px">+Roommate</span>` : ""}
     </td>
-    <td class="td-sub">${esc(listing.housingGender || "—")}</td>
-    <td>
+    <td data-label="Gender" class="td-sub">${esc(listing.housingGender || "—")}</td>
+    <td data-label="Room Pitch">
       <div style="max-width:240px">${esc(listing.pitch || "—")}</div>
       ${
         listing.otherDetails
@@ -269,14 +294,14 @@ function buildRow(listing) {
           : ""
       }
     </td>
-    <td style="font-size:.82rem;min-width:160px;color:var(--sub)">
+    <td data-label="Looking For" style="font-size:.82rem;min-width:160px;color:var(--sub)">
       <div><b style="color:var(--text)">Gender:</b> ${esc(wantedGenders)}</div>
       <div><b style="color:var(--text)">Type:</b> ${esc(wantedTypes)}</div>
       <div><b style="color:var(--text)">Occ.:</b> ${esc(wantedOccupancies)}</div>
       <div style="max-width:180px"><b style="color:var(--text)">Bldgs:</b> ${esc(wantedBuildings)}</div>
     </td>
-    <td style="min-width:140px">${contactCell}</td>
-    <td class="td-sub">${date}</td>
+    <td data-label="Contact" style="min-width:140px">${contactCell}</td>
+    <td data-label="Posted" class="td-sub">${date}</td>
   </tr>`;
 }
 

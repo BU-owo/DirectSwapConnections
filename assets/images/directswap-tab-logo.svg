@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Direct Swap Connections Tab Logo</title>
+  <desc id="desc">Rounded red badge with gold swap arrows and DSC initials.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#CC0000" />
+      <stop offset="1" stop-color="#8E0000" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" />
+
+  <path d="M17 24h23l-4.5-4.5 2.8-2.8L48 26.4l-9.7 9.7-2.8-2.8L40 29H17z" fill="#C8A951" />
+  <path d="M47 40H24l4.5 4.5-2.8 2.8L16 37.6l9.7-9.7 2.8 2.8L24 35h23z" fill="#F7E6B8" />
+
+  <text x="32" y="57" text-anchor="middle" font-family="DM Sans, Arial, sans-serif" font-size="8" font-weight="700" fill="#FDF3D7">DSC</text>
+</svg>

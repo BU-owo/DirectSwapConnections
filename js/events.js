@@ -6,17 +6,50 @@ import { showPanel, updateFilterActive, clearFilters, renderTable } from "./ui.j
 import { handleSubmit, handleDelete } from "./data.js";
 
 export function bindEvents() {
+  const nav = document.querySelector("nav");
+  const navMenu = $("nav-menu");
+  const navToggle = $("nav-menu-toggle");
+
+  const closeNavMenu = () => {
+    if (!nav || !navToggle) return;
+    nav.classList.remove("menu-open");
+    navToggle.setAttribute("aria-expanded", "false");
+  };
+
+  const isMobileNav = () => window.matchMedia("(max-width: 980px)").matches;
+
+  navToggle?.addEventListener("click", () => {
+    if (!nav) return;
+    const isOpen = nav.classList.toggle("menu-open");
+    navToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  });
+
   document.querySelectorAll("[data-panel]").forEach((button) => {
-    button.addEventListener("click", () => showPanel(button.dataset.panel));
+    button.addEventListener("click", () => {
+      showPanel(button.dataset.panel);
+      closeNavMenu();
+    });
   });
 
   document.querySelectorAll("[data-action='signin']").forEach((button) => {
-    button.addEventListener("click", doSignIn);
+    button.addEventListener("click", () => {
+      closeNavMenu();
+      doSignIn();
+    });
   });
 
-  $("btn-signin-nav")?.addEventListener("click", doSignIn);
-  $("btn-signout")?.addEventListener("click", () => signOut(auth));
-  $("preview-edit-btn")?.addEventListener("click", () => showPanel("submit"));
+  $("btn-signin-nav")?.addEventListener("click", () => {
+    closeNavMenu();
+    doSignIn();
+  });
+  $("btn-signout")?.addEventListener("click", () => {
+    closeNavMenu();
+    signOut(auth);
+  });
+  $("preview-edit-btn")?.addEventListener("click", () => {
+    showPanel("submit");
+    closeNavMenu();
+  });
 
   const searchInput = $("fi-search");
   searchInput?.addEventListener("input", () => {
@@ -63,5 +96,15 @@ export function bindEvents() {
 
   $("f-details")?.addEventListener("input", () => {
     $("ct-details").textContent = $("f-details").value.length;
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!isMobileNav() || !nav || !nav.classList.contains("menu-open")) return;
+    if (nav.contains(event.target)) return;
+    closeNavMenu();
+  });
+
+  window.addEventListener("resize", () => {
+    if (!isMobileNav()) closeNavMenu();
   });
 }
