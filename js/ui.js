@@ -1,6 +1,7 @@
-import { BUILDINGS, ROOM_TYPES, OCCUPANCIES, GENDERS } from "./constants.js";
+import { LAYOUTS_BY_BUILDING, BUILDINGS_BY_GROUP, ROOM_TYPES, OCCUPANCIES, parseLayout, getLayoutsForBuilding } from "./housing-data.js";
 import { state } from "./state.js";
 import { $, show, hide, esc, setErr, setMsg } from "./dom.js";
+import { buildRow, showExpandModal } from "./table-formatter.js";
 
 let callbacks = {
   onRequireSignIn: () => {},
@@ -11,11 +12,9 @@ const normalizeValue = (value) => String(value ?? "").trim().toLowerCase();
 
 function getListingTimestampMs(listing) {
   const timestamp = listing.submittedAt ?? listing.updatedAt;
-
   if (!timestamp) return 0;
   if (typeof timestamp.toMillis === "function") return timestamp.toMillis();
   if (typeof timestamp.seconds === "number") return timestamp.seconds * 1000;
-
   const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
@@ -24,32 +23,106 @@ export function setUiCallbacks(nextCallbacks) {
   callbacks = { ...callbacks, ...nextCallbacks };
 }
 
+// ─── Populate all dropdowns and checkboxes on page load ──────────────────────
+
 export function populateOptions() {
-  appendOpts("fi-building", BUILDINGS);
+  // Form: building dropdown with <optgroup> sections
+  populateBuildingSelect("f-building");
+
+  // Browse: building filter (optgroup too)
+  populateBuildingSelect("fi-building");
+
+  // Browse: room type filter
+  appendOpts("fi-type", ROOM_TYPES);
+
+  // Browse: occupancy filter
   appendOpts("fi-occ", OCCUPANCIES);
-  appendOpts("f-building", BUILDINGS);
-  appendOpts("f-occ", OCCUPANCIES);
-  appendChecks("w-gender", "wg", GENDERS);
+
+  // Form: "looking for" checkboxes
+  appendChecks("w-gender", "wg", ["Male", "Female", "Gender Neutral"]);
   appendChecks("w-type", "wt", ROOM_TYPES);
   appendChecks("w-occ", "wo", OCCUPANCIES);
-  appendChecks("w-building", "wb", BUILDINGS);
+  populateBuildingChecks("w-building", "wb");
+
+  // When the form building changes, repopulate the layout dropdown
+  $("f-building")?.addEventListener("change", updateLayoutOptions);
+
+  // Initialize layout dropdown (empty until building chosen)
+  updateLayoutOptions();
 }
+
+function populateBuildingSelect(selectId) {
+  const select = $(selectId);
+  if (!select) return;
+
+  for (const [group, buildings] of Object.entries(BUILDINGS_BY_GROUP)) {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group;
+    buildings.forEach((building) => {
+      const opt = document.createElement("option");
+      opt.value = building;
+      opt.textContent = building;
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  }
+}
+
+function populateBuildingChecks(wrapperId, name) {
+  const wrapper = $(wrapperId);
+  if (!wrapper) return;
+
+  for (const [group, buildings] of Object.entries(BUILDINGS_BY_GROUP)) {
+    const groupLabel = document.createElement("div");
+    groupLabel.className = "check-group-label";
+    groupLabel.textContent = group;
+    wrapper.appendChild(groupLabel);
+
+    buildings.forEach((building) => {
+      const label = document.createElement("label");
+      label.className = "check-opt";
+      label.innerHTML = `<input type="checkbox" name="${name}" value="${esc(building)}" /> ${esc(building)}`;
+      wrapper.appendChild(label);
+    });
+  }
+}
+
+// ─── Layout dropdown (form only) ─────────────────────────────────────────────
+
+export function updateLayoutOptions() {
+  const building = $("f-building")?.value;
+  const layouts = building ? getLayoutsForBuilding(building) : [];
+  const select = $("f-layout");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Select layout…</option>`;
+  layouts.forEach((layout) => {
+    const opt = document.createElement("option");
+    opt.value = layout;
+    opt.textContent = layout;
+    select.appendChild(opt);
+  });
+
+  // Reset layout selection when building changes
+  select.value = "";
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function appendOpts(selectId, items) {
   const select = $(selectId);
   if (!select) return;
   items.forEach((value) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.appendChild(option);
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    select.appendChild(opt);
   });
 }
 
 function appendChecks(wrapperId, name, items) {
   const wrapper = $(wrapperId);
   if (!wrapper) return;
-
   items.forEach((value) => {
     const label = document.createElement("label");
     label.className = "check-opt";
@@ -57,6 +130,8 @@ function appendChecks(wrapperId, name, items) {
     wrapper.appendChild(label);
   });
 }
+
+// ─── Panel switching ──────────────────────────────────────────────────────────
 
 export function showPanel(name) {
   $("panel-browse")?.classList.toggle("hidden", name !== "browse");
@@ -66,10 +141,12 @@ export function showPanel(name) {
   });
 }
 
+// ─── Filter state ─────────────────────────────────────────────────────────────
+
 export function updateFilterActive(id) {
-  const element = $(id);
-  if (!element) return;
-  element.classList.toggle("f-active", element.value !== "" && element.value !== "newest");
+  const el = $(id);
+  if (!el) return;
+  el.classList.toggle("f-active", el.value !== "" && el.value !== "newest");
 }
 
 function updateActiveBadge() {
@@ -78,9 +155,7 @@ function updateActiveBadge() {
   const activeCount = filterIds.filter((id) => $(id)?.value).length + (searchValue ? 1 : 0);
   const badge = $("active-badge");
   const countEl = $("active-count");
-
   if (!badge || !countEl) return;
-
   if (activeCount > 0) {
     countEl.textContent = `${activeCount} filter${activeCount > 1 ? "s" : ""} active`;
     show(badge);
@@ -91,26 +166,113 @@ function updateActiveBadge() {
 
 export function clearFilters() {
   ["fi-gender", "fi-building", "fi-type", "fi-occ", "fi-roommate"].forEach((id) => {
-    const element = $(id);
-    if (!element) return;
-    element.value = "";
-    element.classList.remove("f-active");
+    const el = $(id);
+    if (!el) return;
+    el.value = "";
+    el.classList.remove("f-active");
   });
-
   const search = $("fi-search");
   if (search) search.value = "";
-
   hide($("fi-search-clear"));
-
   const sort = $("fi-sort");
-  if (sort) {
-    sort.value = "newest";
-    sort.classList.remove("f-active");
-  }
-
+  if (sort) { sort.value = "newest"; sort.classList.remove("f-active"); }
   hide($("active-badge"));
   callbacks.onFiltersChanged();
 }
+
+// ─── Browse table rendering ───────────────────────────────────────────────────
+
+export function renderTable() {
+  const tbody = $("listings-tbody");
+  if (!tbody) return;
+
+  const searchValue = normalizeValue($("fi-search")?.value || "");
+  const filterGender = normalizeValue($("fi-gender")?.value || "");
+  const filterBuilding = normalizeValue($("fi-building")?.value || "");
+  const filterType = normalizeValue($("fi-type")?.value || "");      // e.g. "traditional"
+  const filterOcc = normalizeValue($("fi-occ")?.value || "");        // e.g. "single"
+  const filterRoommate = $("fi-roommate")?.value || "";
+  const filterSort = $("fi-sort")?.value || "newest";
+
+  const myId = state.currentUser?.uid;
+  let list = state.allListings.filter((l) => l.id !== myId);
+
+  if (filterGender)   list = list.filter((l) => normalizeValue(l.housingGender) === filterGender);
+  if (filterBuilding) list = list.filter((l) => normalizeValue(l.currentBuilding) === filterBuilding);
+
+  // Type and occupancy filter against the stored roomType / occupancy fields
+  // (split from layout at save time — see data.js handleSubmit)
+  if (filterType) list = list.filter((l) => normalizeValue(l.roomType) === filterType);
+  if (filterOcc)  list = list.filter((l) => normalizeValue(l.occupancy) === filterOcc);
+
+  if (filterRoommate !== "") list = list.filter((l) => String(l.bringingRoommate) === filterRoommate);
+
+  if (searchValue) {
+    const terms = searchValue.split(/\s+/).filter(Boolean);
+    list = list.filter((l) => {
+      const blob = [
+        l.currentBuilding, l.layout, l.roomType, l.occupancy,
+        l.housingGender, l.pitch, l.otherDetails,
+        ...(l.wantedBuildings || []),
+        ...(l.wantedTypes || []),
+        ...(l.wantedOccupancies || []),
+        ...(l.wantedGenders || []),
+      ].join(" ").toLowerCase();
+      return terms.every((t) => blob.includes(t));
+    });
+  }
+
+  if (filterSort === "newest") list = [...list].sort((a, b) => getListingTimestampMs(b) - getListingTimestampMs(a));
+  if (filterSort === "oldest") list = [...list].sort((a, b) => getListingTimestampMs(a) - getListingTimestampMs(b));
+  if (filterSort === "building") {
+    list = [...list].sort((a, b) => {
+      const cmp = normalizeValue(a.currentBuilding).localeCompare(normalizeValue(b.currentBuilding));
+      return cmp !== 0 ? cmp : getListingTimestampMs(b) - getListingTimestampMs(a);
+    });
+  }
+
+  const totalListings = state.allListings.filter((l) => l.id !== myId).length;
+  const resultCount = $("result-count");
+  if (resultCount) {
+    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOcc || filterRoommate;
+    resultCount.textContent = anyFilter
+      ? `Showing ${list.length} of ${totalListings} listings`
+      : `${totalListings} listing${totalListings !== 1 ? "s" : ""}`;
+  }
+
+  updateActiveBadge();
+
+  if (!list.length) {
+    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOcc || filterRoommate;
+    tbody.innerHTML = `<tr><td colspan="6" class="td-empty">
+      <div class="td-empty-icon">🏠</div>
+      <p>${anyFilter
+        ? `No listings match your search.<br><button class="clr-link" id="td-clear-btn">Clear all filters →</button>`
+        : "No listings yet — be the first to submit!"
+      }</p>
+    </td></tr>`;
+    $("td-clear-btn")?.addEventListener("click", clearFilters);
+    return;
+  }
+
+  tbody.innerHTML = list.map((l) => buildRow(l, state.currentUser, state.contactsMap)).join("");
+
+  tbody.querySelectorAll(".expand-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showExpandModal(btn.dataset.listingId, state.allListings);
+    });
+  });
+
+  tbody.querySelectorAll(".contact-locked").forEach((el) => {
+    el.addEventListener("click", () => {
+      showPanel("submit");
+      callbacks.onRequireSignIn();
+    });
+  });
+}
+
+// ─── My listing preview ───────────────────────────────────────────────────────
 
 export function renderMyPreview() {
   const container = $("my-preview");
@@ -125,33 +287,30 @@ export function renderMyPreview() {
   const listing = state.myListing;
   const wantedGenders = (listing.wantedGenders || []).join(", ") || "—";
   const wantedTypes = (listing.wantedTypes || []).join(", ") || "—";
-  const wantedOccupancies = (listing.wantedOccupancies || []).join(", ") || "—";
+  const wantedOccs = (listing.wantedOccupancies || []).join(", ") || "—";
   const wantedBuildings = (listing.wantedBuildings || []).join(", ") || "—";
 
   body.innerHTML = `
     <div class="preview-col">
       <div class="preview-badges">
         <span class="badge badge-red">${esc(listing.currentBuilding || "—")}</span>
-        <span class="badge badge-grey">${esc(listing.roomType || "—")}</span>
-        <span class="badge badge-grey">${esc(listing.occupancy || "—")}</span>
+        <span class="badge badge-grey">${esc(listing.layout || "—")}</span>
         <span class="badge badge-blue">${esc(listing.housingGender || "—")}</span>
         ${listing.bringingRoommate ? `<span class="badge badge-gold">+Roommate</span>` : ""}
       </div>
       <div>
         <div class="preview-pitch-label">Your pitch</div>
         <div class="preview-pitch">${esc(listing.pitch || "—")}</div>
-        ${
-          listing.otherDetails
-            ? `<div style="font-size:.82rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(listing.otherDetails)}</div>`
-            : ""
-        }
+        ${listing.otherDetails
+          ? `<div style="font-size:.82rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(listing.otherDetails)}</div>`
+          : ""}
       </div>
     </div>
     <div class="preview-col">
       <div class="preview-looking">
         <div><b>Looking for gender:</b> ${esc(wantedGenders)}</div>
         <div><b>Room types:</b> ${esc(wantedTypes)}</div>
-        <div><b>Occupancies:</b> ${esc(wantedOccupancies)}</div>
+        <div><b>Occupancies:</b> ${esc(wantedOccs)}</div>
         <div><b>Would consider:</b> ${esc(wantedBuildings)}</div>
       </div>
       <div class="preview-contact-note">
@@ -162,157 +321,20 @@ export function renderMyPreview() {
   show(container);
 }
 
-export function renderTable() {
-  const tbody = $("listings-tbody");
-  if (!tbody) return;
-
-  const searchValue = normalizeValue($("fi-search")?.value || "");
-  const filterGender = normalizeValue($("fi-gender")?.value || "");
-  const filterBuilding = normalizeValue($("fi-building")?.value || "");
-  const filterType = normalizeValue($("fi-type")?.value || "");
-  const filterOccupancy = normalizeValue($("fi-occ")?.value || "");
-  const filterRoommate = $("fi-roommate")?.value || "";
-  const filterSort = $("fi-sort")?.value || "newest";
-
-  const myId = state.currentUser?.uid;
-  let list = state.allListings.filter((listing) => listing.id !== myId);
-
-  if (filterGender) list = list.filter((listing) => normalizeValue(listing.housingGender) === filterGender);
-  if (filterBuilding) list = list.filter((listing) => normalizeValue(listing.currentBuilding) === filterBuilding);
-  if (filterType) list = list.filter((listing) => normalizeValue(listing.roomType) === filterType);
-  if (filterOccupancy) list = list.filter((listing) => normalizeValue(listing.occupancy) === filterOccupancy);
-  if (filterRoommate !== "") list = list.filter((listing) => String(listing.bringingRoommate) === filterRoommate);
-
-  if (searchValue) {
-    const terms = searchValue.split(/\s+/).filter(Boolean);
-    list = list.filter((listing) => {
-      const blob = [
-        listing.currentBuilding,
-        listing.roomType,
-        listing.occupancy,
-        listing.housingGender,
-        listing.pitch,
-        listing.otherDetails,
-        ...(listing.wantedBuildings || []),
-        ...(listing.wantedTypes || []),
-        ...(listing.wantedOccupancies || []),
-        ...(listing.wantedGenders || []),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return terms.every((term) => blob.includes(term));
-    });
-  }
-
-  if (filterSort === "newest") {
-    list = [...list].sort((a, b) => getListingTimestampMs(b) - getListingTimestampMs(a));
-  }
-  if (filterSort === "oldest") {
-    list = [...list].sort((a, b) => getListingTimestampMs(a) - getListingTimestampMs(b));
-  }
-  if (filterSort === "building") {
-    list = [...list].sort((a, b) => {
-      const byBuilding = normalizeValue(a.currentBuilding).localeCompare(normalizeValue(b.currentBuilding));
-      if (byBuilding !== 0) return byBuilding;
-      return getListingTimestampMs(b) - getListingTimestampMs(a);
-    });
-  }
-
-  const totalListings = state.allListings.filter((listing) => listing.id !== myId).length;
-  const resultCount = $("result-count");
-  if (resultCount) {
-    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOccupancy || filterRoommate;
-    resultCount.textContent = anyFilter
-      ? `Showing ${list.length} of ${totalListings} listings`
-      : `${totalListings} listing${totalListings !== 1 ? "s" : ""}`;
-  }
-
-  updateActiveBadge();
-
-  if (!list.length) {
-    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOccupancy || filterRoommate;
-    tbody.innerHTML = `<tr><td colspan="8" class="td-empty">
-      <div class="td-empty-icon">🏠</div>
-      <p>${
-        anyFilter
-          ? `No listings match your search.<br><button class="clr-link" id="td-clear-btn">Clear all filters →</button>`
-          : "No listings yet — be the first to submit!"
-      }</p>
-    </td></tr>`;
-
-    $("td-clear-btn")?.addEventListener("click", clearFilters);
-    return;
-  }
-
-  tbody.innerHTML = list.map(buildRow).join("");
-  tbody.querySelectorAll(".contact-locked").forEach((element) => {
-    element.addEventListener("click", () => {
-      showPanel("submit");
-      callbacks.onRequireSignIn();
-    });
-  });
-}
-
-function buildRow(listing) {
-  const date = listing.submittedAt?.toDate
-    ? listing.submittedAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })
-    : "—";
-
-  const wantedGenders = (listing.wantedGenders || []).join(", ") || "—";
-  const wantedTypes = (listing.wantedTypes || []).join(", ") || "—";
-  const wantedOccupancies = (listing.wantedOccupancies || []).join(", ") || "—";
-  const wantedBuildings = (listing.wantedBuildings || []).join(", ") || "—";
-
-  let contactCell;
-  if (!state.currentUser) {
-    contactCell = `<span class="contact-locked" title="Sign in to view">🔒 Sign in to view</span>`;
-  } else {
-    const contact = state.contactsMap[listing.id] || {};
-    const parts = [];
-
-    if (listing.email) parts.push(`<a href="mailto:${esc(listing.email)}" class="contact-link">${esc(listing.email)}</a>`);
-    if (contact.redditUsername) parts.push(`<small style="color:var(--sub)">${esc(contact.redditUsername)}</small>`);
-    if (contact.phone) parts.push(`<small style="color:var(--sub)">${esc(contact.phone)}</small>`);
-    if (contact.otherContact) parts.push(`<small style="color:var(--sub)">${esc(contact.otherContact)}</small>`);
-
-    contactCell = parts.join("<br>") || `<span style="color:#aaa">—</span>`;
-  }
-
-  return `<tr>
-    <td data-label="Building"><span class="badge badge-red">${esc(listing.currentBuilding || "—")}</span></td>
-    <td data-label="Type" class="td-sub">${esc(listing.roomType || "—")}</td>
-    <td data-label="Occupancy" class="td-sub">
-      ${esc(listing.occupancy || "—")}
-      ${listing.bringingRoommate ? `<br><span class="badge badge-gold" style="margin-top:4px">+Roommate</span>` : ""}
-    </td>
-    <td data-label="Gender" class="td-sub">${esc(listing.housingGender || "—")}</td>
-    <td data-label="Room Pitch">
-      <div style="max-width:240px">${esc(listing.pitch || "—")}</div>
-      ${
-        listing.otherDetails
-          ? `<div style="font-size:.8rem;color:var(--sub);font-style:italic;margin-top:4px">${esc(listing.otherDetails)}</div>`
-          : ""
-      }
-    </td>
-    <td data-label="Looking For" style="font-size:.82rem;min-width:160px;color:var(--sub)">
-      <div><b style="color:var(--text)">Gender:</b> ${esc(wantedGenders)}</div>
-      <div><b style="color:var(--text)">Type:</b> ${esc(wantedTypes)}</div>
-      <div><b style="color:var(--text)">Occ.:</b> ${esc(wantedOccupancies)}</div>
-      <div style="max-width:180px"><b style="color:var(--text)">Bldgs:</b> ${esc(wantedBuildings)}</div>
-    </td>
-    <td data-label="Contact" style="min-width:140px">${contactCell}</td>
-    <td data-label="Posted" class="td-sub">${date}</td>
-  </tr>`;
-}
+// ─── Form fill / reset ────────────────────────────────────────────────────────
 
 export function fillForm(listing, contact) {
   $("f-gender").value = listing.housingGender || "";
   $("f-building").value = listing.currentBuilding || "";
-  $("f-type").value = listing.roomType || "";
-  $("f-occ").value = listing.occupancy || "";
 
-  document.querySelectorAll("[name='f-roommate']").forEach((radio) => {
-    radio.checked = radio.value === String(listing.bringingRoommate);
+  // Repopulate layout options for this building, then restore selection
+  updateLayoutOptions();
+  if (listing.layout) {
+    $("f-layout").value = listing.layout;
+  }
+
+  document.querySelectorAll("[name='f-roommate']").forEach((r) => {
+    r.checked = r.value === String(listing.bringingRoommate);
   });
 
   $("f-pitch").value = listing.pitch || "";
@@ -320,18 +342,10 @@ export function fillForm(listing, contact) {
   $("f-details").value = listing.otherDetails || "";
   $("ct-details").textContent = (listing.otherDetails || "").length;
 
-  document.querySelectorAll("[name='wg']").forEach((checkbox) => {
-    checkbox.checked = (listing.wantedGenders || []).includes(checkbox.value);
-  });
-  document.querySelectorAll("[name='wt']").forEach((checkbox) => {
-    checkbox.checked = (listing.wantedTypes || []).includes(checkbox.value);
-  });
-  document.querySelectorAll("[name='wo']").forEach((checkbox) => {
-    checkbox.checked = (listing.wantedOccupancies || []).includes(checkbox.value);
-  });
-  document.querySelectorAll("[name='wb']").forEach((checkbox) => {
-    checkbox.checked = (listing.wantedBuildings || []).includes(checkbox.value);
-  });
+  document.querySelectorAll("[name='wg']").forEach((cb) => { cb.checked = (listing.wantedGenders || []).includes(cb.value); });
+  document.querySelectorAll("[name='wt']").forEach((cb) => { cb.checked = (listing.wantedTypes || []).includes(cb.value); });
+  document.querySelectorAll("[name='wo']").forEach((cb) => { cb.checked = (listing.wantedOccupancies || []).includes(cb.value); });
+  document.querySelectorAll("[name='wb']").forEach((cb) => { cb.checked = (listing.wantedBuildings || []).includes(cb.value); });
 
   $("f-reddit").value = contact.redditUsername || "";
   $("f-phone").value = contact.phone || "";
@@ -340,11 +354,7 @@ export function fillForm(listing, contact) {
 
 export function resetForm() {
   $("the-form")?.reset();
-  document
-    .querySelectorAll("#the-form input[type='checkbox'], #the-form input[type='radio']")
-    .forEach((input) => {
-      input.checked = false;
-    });
+  document.querySelectorAll("#the-form input[type='checkbox'], #the-form input[type='radio']").forEach((i) => { i.checked = false; });
 
   $("ct-pitch").textContent = "0";
   $("ct-details").textContent = "0";
@@ -355,4 +365,6 @@ export function resetForm() {
   hide($("btn-delete"));
   setErr("form-err", "");
   setMsg("success-msg", "");
+
+  updateLayoutOptions(); // clear layout options when building resets
 }

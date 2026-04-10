@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Direct Swap Connections — BU Housing</title>
@@ -99,12 +100,14 @@
           <option>Male</option><option>Female</option><option>Gender Neutral</option>
         </select>
         <select id="fi-building"><option value="">All buildings</option></select>
-        <select id="fi-type">
-          <option value="">All types</option>
-          <option>Dorm</option><option>Dorm Suite</option>
-          <option>Apartment Suite</option><option>Apartment</option>
-        </select>
-        <select id="fi-occ"><option value="">All occupancies</option></select>
+      <select id="fi-type">
+        <option value="">All room types</option>
+        <!-- Populated by ui.js populateOptions() from ROOM_TYPES -->
+      </select>
+      <select id="fi-occ">
+        <option value="">All occupancies</option>
+        <!-- Populated by ui.js populateOptions() from OCCUPANCIES -->
+      </select>
         <select id="fi-roommate">
           <option value="">Roommate: any</option>
           <option value="true">Bringing +1</option>
@@ -123,16 +126,20 @@
 
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Building</th><th>Type</th><th>Occupancy</th><th>Gender</th>
-            <th>Room Pitch</th><th>Looking For</th><th>Contact</th><th>Posted</th>
-          </tr>
-        </thead>
-        <tbody id="listings-tbody">
-          <tr><td colspan="8" class="td-loading">Loading listings…</td></tr>
-        </tbody>
-      </table>
+  <thead>
+    <tr>
+      <th>Building</th>
+      <th>Gender / Type / Occ</th>
+      <th>Room Pitch</th>
+      <th>Looking For</th>
+      <th>Contact</th>
+      <th>Posted</th>
+    </tr>
+  </thead>
+  <tbody id="listings-tbody">
+    <tr><td colspan="6" class="td-loading">Loading listings…</td></tr>
+  </tbody>
+</table>
     </div>
   </div>
 
@@ -189,19 +196,13 @@
                 <select id="f-building" required><option value="">Select building…</option></select>
               </div>
 
-              <div class="ffield">
-                <label for="f-type">Room Type <span class="req">*</span></label>
-                <select id="f-type" required>
-                  <option value="">Select type…</option>
-                  <option>Dorm</option><option>Dorm Suite</option>
-                  <option>Apartment Suite</option><option>Apartment</option>
-                </select>
-              </div>
-
-              <div class="ffield">
-                <label for="f-occ">Occupancy <span class="req">*</span></label>
-                <select id="f-occ" required><option value="">Select occupancy…</option></select>
-              </div>
+<div class="ffield">
+  <label for="f-layout">Room Layout <span class="req">*</span></label>
+  <select id="f-layout" required>
+    <option value="">Select building first…</option>
+  </select>
+  <p class="fhint">Options update based on your selected building.</p>
+</div>
 
               <div class="ffield">
                 <label>Bringing a Roommate? <span class="req">*</span></label>
