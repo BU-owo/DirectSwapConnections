@@ -1,180 +1,903 @@
 // Auto-generated from BU housing CSV data
-// Layout format: "RoomType Occupancy" e.g. "Traditional Double"
 
-export const LAYOUTS_BY_BUILDING = {
-  "Lavender House": ["Traditional Single", "Traditional Double"],
-  "163 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Trustee Scholars House": ["Traditional Single", "Traditional Double"],
-  "Sargent College House": ["Traditional Triple", "Semi-Suite Double"],
-  "Music House": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "Management House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Limited Parietal House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Education House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Common Ground House": ["Traditional Single", "Traditional Double", "Semi-Suite Triple"],
-  "College of General Studies House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Classics House": ["Traditional Single", "Traditional Double", "Semi-Suite Double"],
-  "625 Commonwealth Avenue": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "210–212 Bay State Road": ["Traditional Single", "Traditional Double", "Semi-Suite Double"],
-  "209 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Triple"],
-  "208 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "206 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "204 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "203 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "202 Bay State Road": ["Traditional Single", "Traditional Double"],
-  "201 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad", "Semi-Suite Double", "Semi-Suite Triple"],
-  "199 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Single", "Semi-Suite Double"],
-  "196 Bay State Road": ["Traditional Single", "Traditional Double", "Apartment Double"],
-  "195–197 Bay State Road": ["Traditional Single", "Traditional Double"],
-  "194 Bay State Road": ["Traditional Single", "Traditional Double"],
-  "192 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "188–190 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "184–186 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "182 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "181 Bay State Road": ["Traditional Single", "Traditional Triple", "Semi-Suite Double", "Semi-Suite Triple"],
-  "180 Bay State Road": ["Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "178 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "177 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad"],
-  "175 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad", "Semi-Suite Double"],
-  "172 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "167–169 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "162–164 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "159 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "153 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double", "Semi-Suite Triple"],
-  "728 Commonwealth Avenue": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "726 Commonwealth Avenue": ["Apartment Double", "Studio Single"],
-  "722 Commonwealth Avenue": ["Apartment Double", "Studio Single"],
-  "714 Commonwealth Avenue": ["Apartment Single", "Apartment Double"],
-  "708 Commonwealth Avenue": ["Apartment Single", "Apartment Double"],
-  "627–629 Commonwealth Avenue": ["Apartment Single", "Apartment Double"],
-  "214 Bay State Road": ["Apartment Double", "Studio Single"],
-  "198 Bay State Road": ["Apartment Double", "Studio Single", "Studio Double"],
-  "173 Bay State Road": ["Apartment Double", "Studio Double"],
-  "171 Bay State Road": ["Apartment Double", "Studio Single", "Studio Double"],
-  "94 Bay State Road": ["Apartment Double", "Studio Single"],
-  "139 Bay State Road": ["Studio Single", "Studio Double"],
-  "133 Bay State Road": ["Apartment Single", "Apartment Double", "Studio Double"],
-  "115 Bay State Road": ["Apartment Double", "Studio Single", "Studio Double"],
-  "112 Bay State Road": ["Apartment Double", "Studio Single", "Studio Double"],
-  "110 Bay State Road": ["Apartment Double", "Studio Single", "Studio Double"],
-  "126 Bay State Road": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad"],
-  "90–92 Bay State Road": ["Traditional Single", "Traditional Double", "Studio Single"],
-  "117 Bay State Road": ["Semi-Suite Double", "Semi-Suite Triple", "Suite Double", "Suite Triple"],
-  "81–83 Bay State Road": ["Traditional Single", "Traditional Double", "Semi-Suite Double", "Suite Double"],
-  "79 Bay State Road": ["Traditional Single", "Semi-Suite Single", "Semi-Suite Double", "Studio Single"],
-  "531 Beacon Street": ["Traditional Single", "Traditional Triple"],
-  "517–521 Beacon Street": ["Traditional Single", "Traditional Double"],
-  "481–483 Commonwealth Avenue": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad", "Semi-Suite Double", "Semi-Suite Triple", "Semi-Suite Quad"],
-  "135 Bay State Road": ["Traditional Quad"],
-  "Riverway House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Suite Double"],
-  "Pilgrim House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad"],
-  "Longwood House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad", "Semi-Suite Single", "Semi-Suite Double"],
-  "Campus Center & Student Residence": ["Traditional Double", "Traditional Triple", "Suite Single", "Suite Double"],
-  "Peabody Hall": ["Traditional Single", "Traditional Double", "Traditional Triple", "Suite Double", "Suite Triple"],
-  "Warren Towers": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad"],
-  "Sleeper Hall": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "610 Beacon Street": ["Suite Single", "Suite Double"],
-  "Danielsen Hall": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "575 Commonwealth Avenue": ["Traditional Single", "Traditional Triple", "Semi-Suite Double"],
-  "1019 Commonwealth Avenue": ["Suite Single", "Suite Double"],
-  "The Towers": ["Traditional Double"],
-  "Rich Hall": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "Kilachand Hall": ["Semi-Suite Double", "Semi-Suite Triple", "Suite Double", "Suite Triple"],
-  "Claflin Hall": ["Traditional Single", "Traditional Double", "Traditional Triple", "Traditional Quad", "Semi-Suite Triple"],
-  "13 Buswell Street": ["Traditional Single", "Traditional Double", "Traditional Triple", "Suite Double"],
-  "Engineering House": ["Traditional Single", "Semi-Suite Double"],
-  "Earth House": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "Core Curriculum House": ["Traditional Single", "Traditional Double", "Semi-Suite Double"],
-  "Community Service House": ["Traditional Single", "Traditional Double", "Suite Double"],
-  "522 Park Drive": ["Suite Single", "Suite Double"],
-  "520 Park Drive": ["Suite Single", "Suite Double"],
-  "518 Park Drive": ["Suite Single", "Suite Double"],
-  "516 Park Drive": ["Suite Single", "Suite Double"],
-  "514 Park Drive": ["Suite Single", "Suite Double"],
-  "48 Buswell Street": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "47 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "45 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "44 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "43 Buswell Street": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "42 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "37–39 Carlton Street": ["Traditional Single", "Traditional Double", "Traditional Triple"],
-  "40 Buswell Street": ["Traditional Double", "Traditional Triple", "Semi-Suite Quad"],
-  "37 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "33 Buswell Street": ["Traditional Single", "Traditional Double", "Traditional Triple", "Suite Double"],
-  "29 Buswell Street": ["Traditional Single", "Traditional Double"],
-  "1053 Beacon Street": ["Traditional Single"],
-  "11 Buswell Street": ["Traditional Single", "Traditional Double", "Traditional Triple", "Semi-Suite Double"],
-  "17 Buswell Street": ["Apartment Single", "Apartment Double", "Studio Double"],
-  "98 Mountfort Street": ["Apartment Double"],
-  "96 Mountfort Street": ["Apartment Single", "Apartment Double"],
-  "872 Beacon Street": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "870 Beacon Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "866 Beacon Street": ["Traditional Single", "Traditional Double", "Apartment Single", "Apartment Double", "Studio Single", "Studio Double"],
-  "864 Beacon Street": ["Apartment Single", "Apartment Double", "Studio Single", "Studio Double"],
-  "862 Beacon Street": ["Apartment Double", "Studio Single"],
-  "860 Beacon Street": ["Apartment Single", "Apartment Double", "Apartment Triple", "Studio Double"],
-  "856 Beacon Street": ["Apartment Double", "Studio Double"],
-  "852 Beacon Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "848 Beacon Street": ["Apartment Single", "Apartment Double", "Apartment Triple", "Studio Single"],
-  "844 Beacon Street": ["Apartment Single", "Apartment Double"],
-  "836 Beacon Street": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "834 Beacon Street": ["Apartment Double", "Studio Single"],
-  "832 Beacon Street": ["Apartment Double", "Studio Single"],
-  "830 Beacon Street": ["Apartment Double", "Studio Double"],
-  "828 Beacon Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "826 Beacon Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "824 Beacon Street": ["Studio Single", "Studio Double"],
-  "820 Beacon Street": ["Apartment Single", "Apartment Double", "Studio Single", "Studio Double"],
-  "74 St. Mary's Street": ["Apartment Single"],
-  "6 Buswell Street": ["Apartment Single", "Apartment Double"],
-  "55 Buswell Street": ["Apartment Single", "Apartment Double"],
-  "52 Buswell Street": ["Apartment Single", "Apartment Double"],
-  "515 Park Drive": ["Apartment Single", "Apartment Double"],
-  "504 Park Drive": ["Apartment Single"],
-  "500 Park Drive": ["Apartment Single", "Studio Single"],
-  "50 Buswell Street": ["Apartment Single", "Apartment Double"],
-  "5 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "46 Mountfort Street": ["Apartment Single", "Apartment Double"],
-  "41 Buswell Street": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "39 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "38 Buswell Street": ["Apartment Single", "Apartment Double"],
-  "35 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "34 Buswell Street": ["Apartment Double", "Studio Single"],
-  "3 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double", "Studio Triple"],
-  "24 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "22 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "2 Buswell Street": ["Apartment Double"],
-  "1A Buswell Street": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "16 Arundel Street": ["Apartment Single", "Apartment Double"],
-  "15 Buswell Street": ["Apartment Double", "Studio Single", "Studio Double"],
-  "100 Mountfort Street": ["Apartment Single"],
-  "509 Park Drive": ["Apartment Single", "Apartment Double", "Studio Single"],
-  "StuVi I": ["Suite Single", "Suite Double", "Apartment Single"],
-  "StuVi II": ["Apartment Single"],
-};
-
-// Buildings grouped by campus area, for <optgroup> rendering
-export const BUILDINGS_BY_GROUP = {
-  "Large Traditional-Style Residences": ["Warren Towers", "Claflin Hall", "Rich Hall", "Sleeper Hall", "The Towers", "Danielsen Hall", "Kilachand Hall", "610 Beacon Street", "1019 Commonwealth Avenue", "575 Commonwealth Avenue"],
-  "Student Village": ["StuVi I", "StuVi II"],
-  "Fenway Campus": ["Riverway House", "Pilgrim House", "Longwood House", "Campus Center & Student Residence", "Peabody Hall"],
-  "Central Campus Traditional Brownstones": ["Lavender House", "163 Bay State Road", "Trustee Scholars House", "Sargent College House", "Music House", "Management House", "Limited Parietal House", "Education House", "Common Ground House", "College of General Studies House", "Classics House", "625 Commonwealth Avenue", "210–212 Bay State Road", "209 Bay State Road", "208 Bay State Road", "206 Bay State Road", "204 Bay State Road", "203 Bay State Road", "202 Bay State Road", "201 Bay State Road", "199 Bay State Road", "196 Bay State Road", "195–197 Bay State Road", "194 Bay State Road", "192 Bay State Road", "188–190 Bay State Road", "184–186 Bay State Road", "182 Bay State Road", "181 Bay State Road", "180 Bay State Road", "178 Bay State Road", "177 Bay State Road", "175 Bay State Road", "172 Bay State Road", "167–169 Bay State Road", "162–164 Bay State Road", "159 Bay State Road", "153 Bay State Road"],
-  "Central Campus Apartments": ["728 Commonwealth Avenue", "726 Commonwealth Avenue", "722 Commonwealth Avenue", "714 Commonwealth Avenue", "708 Commonwealth Avenue", "627–629 Commonwealth Avenue", "214 Bay State Road", "198 Bay State Road", "173 Bay State Road", "171 Bay State Road"],
-  "East Campus Traditional Brownstones": ["126 Bay State Road", "90–92 Bay State Road", "117 Bay State Road", "81–83 Bay State Road", "79 Bay State Road", "531 Beacon Street", "517–521 Beacon Street", "481–483 Commonwealth Avenue", "135 Bay State Road"],
-  "East Campus Apartments": ["94 Bay State Road", "139 Bay State Road", "133 Bay State Road", "115 Bay State Road", "112 Bay State Road", "110 Bay State Road"],
-  "South Campus Traditional Brownstones": ["13 Buswell Street", "Engineering House", "Earth House", "Core Curriculum House", "Community Service House", "522 Park Drive", "520 Park Drive", "518 Park Drive", "516 Park Drive", "514 Park Drive", "48 Buswell Street", "47 Buswell Street", "45 Buswell Street", "44 Buswell Street", "43 Buswell Street", "42 Buswell Street", "37–39 Carlton Street", "40 Buswell Street", "37 Buswell Street", "33 Buswell Street", "29 Buswell Street", "1053 Beacon Street", "11 Buswell Street"],
-  "South Campus Apartments": ["17 Buswell Street", "98 Mountfort Street", "96 Mountfort Street", "872 Beacon Street", "870 Beacon Street", "866 Beacon Street", "864 Beacon Street", "862 Beacon Street", "860 Beacon Street", "856 Beacon Street", "852 Beacon Street", "848 Beacon Street", "844 Beacon Street", "836 Beacon Street", "834 Beacon Street", "832 Beacon Street", "830 Beacon Street", "828 Beacon Street", "826 Beacon Street", "824 Beacon Street", "820 Beacon Street", "74 St. Mary's Street", "6 Buswell Street", "55 Buswell Street", "52 Buswell Street", "515 Park Drive", "504 Park Drive", "500 Park Drive", "50 Buswell Street", "5 Buswell Street", "46 Mountfort Street", "41 Buswell Street", "39 Buswell Street", "38 Buswell Street", "35 Buswell Street", "34 Buswell Street", "3 Buswell Street", "24 Buswell Street", "22 Buswell Street", "2 Buswell Street", "1A Buswell Street", "16 Arundel Street", "15 Buswell Street", "100 Mountfort Street", "509 Park Drive"],
-};
-
-// All unique room types and occupancies (for browse filters)
-export const ROOM_TYPES = ["Traditional", "Semi-Suite", "Suite", "Apartment", "Studio"];
-export const OCCUPANCIES = ["Single", "Double", "Triple", "Quad"];
+export const housingData = [
+  {
+    buildingName: "Lavender House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "165 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "163 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "163 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Trustee Scholars House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "200 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "Sargent College House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "205 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Triple"]
+  },
+  {
+    buildingName: "Music House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "207 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Management House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "161 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Limited Parietal House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "157 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Education House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "179 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Common Ground House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "158–160 Bay State Road",
+    layouts: ["Semi-Suite Triple", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "College of General Studies House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "166–168 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Classics House",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "176 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "625 Commonwealth Avenue",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "625 Commonwealth Avenue",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "210–212 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "210–212 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "209 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "209 Bay State Road",
+    layouts: ["Semi-Suite Triple", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "208 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "208 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "206 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "206 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "204 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "204 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "203 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "203 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "202 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "202 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "201 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "201 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Triple", "Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "199 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "199 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Single", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "196 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "196 Bay State Road",
+    layouts: ["Apartment Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "195–197 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "195–197 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "194 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "194 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "192 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "192 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "188–190 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "188–190 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "184–186 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "184–186 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "182 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "182 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "181 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "181 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Triple", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "180 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "180 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Triple"]
+  },
+  {
+    buildingName: "178 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "178 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "177 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "177 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "175 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "175 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "172 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "172 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "167–169 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "167–169 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "162–164 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "162–164 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "159 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "159 Bay State Road",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "153 Bay State Road",
+    campusGroup: "Central Campus Traditional Brownstones",
+    address: "153 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Triple", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "728 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "728 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "726 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "726 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "722 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "722 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "714 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "714 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "708 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "708 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "627–629 Commonwealth Avenue",
+    campusGroup: "Central Campus Apartments",
+    address: "627–629 Commonwealth Avenue",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "214 Bay State Road",
+    campusGroup: "Central Campus Apartments",
+    address: "214 Bay State Road",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "198 Bay State Road",
+    campusGroup: "Central Campus Apartments",
+    address: "198 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "173 Bay State Road",
+    campusGroup: "Central Campus Apartments",
+    address: "173 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double"]
+  },
+  {
+    buildingName: "171 Bay State Road",
+    campusGroup: "Central Campus Apartments",
+    address: "171 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "94 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "94 Bay State Road",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "139 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "139 Bay State Road",
+    layouts: ["Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "133 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "133 Bay State Road",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Double"]
+  },
+  {
+    buildingName: "115 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "115 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "112 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "112 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "110 Bay State Road",
+    campusGroup: "East Campus Apartments",
+    address: "110 Bay State Road",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "126 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "126 Bay State Road",
+    layouts: ["Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "90–92 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "90–92 Bay State Road",
+    layouts: ["Studio Single", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "117 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "117 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Triple", "Suite Double", "Suite Triple"]
+  },
+  {
+    buildingName: "81–83 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "81–83 Bay State Road",
+    layouts: ["Semi-Suite Double", "Suite Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "79 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "79 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Single", "Studio Single", "Traditional Single"]
+  },
+  {
+    buildingName: "531 Beacon Street",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "531 Beacon Street",
+    layouts: ["Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "517–521 Beacon Street",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "517–521 Beacon Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "481–483 Commonwealth Avenue",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "481–483 Commonwealth Avenue",
+    layouts: ["Semi-Suite Double", "Semi-Suite Quad", "Semi-Suite Triple", "Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "135 Bay State Road",
+    campusGroup: "East Campus Traditional Brownstones",
+    address: "135 Bay State Road",
+    layouts: ["Traditional Quad"]
+  },
+  {
+    buildingName: "Riverway House",
+    campusGroup: "Fenway Campus",
+    address: "162 Riverway",
+    layouts: ["Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Pilgrim House",
+    campusGroup: "Fenway Campus",
+    address: "37 Pilgrim Road",
+    layouts: ["Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Longwood House",
+    campusGroup: "Fenway Campus",
+    address: "154 Riverway",
+    layouts: ["Semi-Suite Double", "Semi-Suite Single", "Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Campus Center & Student Residence",
+    campusGroup: "Fenway Campus",
+    address: "150 Riverway",
+    layouts: ["Suite Double", "Suite Single", "Traditional Double", "Traditional Triple"]
+  },
+  {
+    buildingName: "Peabody Hall",
+    campusGroup: "Fenway Campus",
+    address: "210 Riverway",
+    layouts: ["Suite Double", "Suite Triple", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Warren Towers",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "700 Commonwealth Avenue",
+    layouts: ["Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Sleeper Hall",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "275 Babcock Street",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "610 Beacon Street",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "610 Beacon Street",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "Danielsen Hall",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "512 Beacon Street",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "575 Commonwealth Avenue",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "575 Commonwealth Avenue",
+    layouts: ["Semi-Suite Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "1019 Commonwealth Avenue",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "1019 Commonwealth Avenue",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "The Towers",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "140 Bay State Road",
+    layouts: ["Traditional Double"]
+  },
+  {
+    buildingName: "Rich Hall",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "277 Babcock Street",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Kilachand Hall",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "91 Bay State Road",
+    layouts: ["Semi-Suite Double", "Semi-Suite Triple", "Suite Double", "Suite Triple"]
+  },
+  {
+    buildingName: "Claflin Hall",
+    campusGroup: "Large Traditional-Style Residences",
+    address: "273 Babcock Street",
+    layouts: ["Semi-Suite Triple", "Traditional Double", "Traditional Quad", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "13 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "13 Buswell Street",
+    layouts: ["Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Engineering House",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "1 Buswell Street",
+    layouts: ["Semi-Suite Double", "Traditional Single"]
+  },
+  {
+    buildingName: "Earth House",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "7 Buswell Street",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "Core Curriculum House",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "141 Carlton Street",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "Community Service House",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "31 Buswell Street",
+    layouts: ["Suite Double", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "522 Park Drive",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "522 Park Drive",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "520 Park Drive",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "520 Park Drive",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "518 Park Drive",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "518 Park Drive",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "516 Park Drive",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "516 Park Drive",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "514 Park Drive",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "514 Park Drive",
+    layouts: ["Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "48 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "48 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "47 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "47 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "45 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "45 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "44 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "44 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "43 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "43 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "42 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "42 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "37–39 Carlton Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "37–39 Carlton Street",
+    layouts: ["Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "40 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "40 Buswell Street",
+    layouts: ["Semi-Suite Quad", "Traditional Double", "Traditional Triple"]
+  },
+  {
+    buildingName: "37 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "37 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "33 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "33 Buswell Street",
+    layouts: ["Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "29 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "29 Buswell Street",
+    layouts: ["Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "1053 Beacon Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "1053 Beacon Street",
+    layouts: ["Traditional Single"]
+  },
+  {
+    buildingName: "11 Buswell Street",
+    campusGroup: "South Campus Traditional Brownstones",
+    address: "11 Buswell Street",
+    layouts: ["Semi-Suite Double", "Traditional Double", "Traditional Single", "Traditional Triple"]
+  },
+  {
+    buildingName: "17 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "17 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Double"]
+  },
+  {
+    buildingName: "98 Mountfort Street",
+    campusGroup: "South Campus Apartments",
+    address: "98 Mountfort Street",
+    layouts: ["Apartment Double"]
+  },
+  {
+    buildingName: "96 Mountfort Street",
+    campusGroup: "South Campus Apartments",
+    address: "96 Mountfort Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "872 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "872 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "870 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "870 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "866 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "866 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Double", "Studio Single", "Traditional Double", "Traditional Single"]
+  },
+  {
+    buildingName: "864 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "864 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "862 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "862 Beacon Street",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "860 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "860 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Apartment Triple", "Studio Double"]
+  },
+  {
+    buildingName: "856 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "856 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double"]
+  },
+  {
+    buildingName: "852 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "852 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "848 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "848 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Apartment Triple", "Studio Single"]
+  },
+  {
+    buildingName: "844 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "844 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "836 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "836 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "834 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "834 Beacon Street",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "832 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "832 Beacon Street",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "830 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "830 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double"]
+  },
+  {
+    buildingName: "828 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "828 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "826 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "826 Beacon Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "824 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "824 Beacon Street",
+    layouts: ["Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "820 Beacon Street",
+    campusGroup: "South Campus Apartments",
+    address: "820 Beacon Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "74 St. Mary’s Street",
+    campusGroup: "South Campus Apartments",
+    address: "74 St. Mary’s Street",
+    layouts: ["Apartment Single"]
+  },
+  {
+    buildingName: "6 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "6 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "55 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "55 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "52 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "52 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "515 Park Drive",
+    campusGroup: "South Campus Apartments",
+    address: "515 Park Drive",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "504 Park Drive",
+    campusGroup: "South Campus Apartments",
+    address: "504 Park Drive",
+    layouts: ["Apartment Single"]
+  },
+  {
+    buildingName: "500 Park Drive",
+    campusGroup: "South Campus Apartments",
+    address: "500 Park Drive",
+    layouts: ["Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "50 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "50 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "5 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "5 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "46 Mountfort Street",
+    campusGroup: "South Campus Apartments",
+    address: "46 Mountfort Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "41 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "41 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "39 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "39 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "38 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "38 Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "35 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "35 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "34 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "34 Buswell Street",
+    layouts: ["Apartment Double", "Studio Single"]
+  },
+  {
+    buildingName: "3 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "3 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single", "Studio Triple"]
+  },
+  {
+    buildingName: "24 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "24 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "22 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "22 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "2 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "2 Buswell Street",
+    layouts: ["Apartment Double"]
+  },
+  {
+    buildingName: "1A Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "1A Buswell Street",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "16 Arundel Street",
+    campusGroup: "South Campus Apartments",
+    address: "16 Arundel Street",
+    layouts: ["Apartment Double", "Apartment Single"]
+  },
+  {
+    buildingName: "15 Buswell Street",
+    campusGroup: "South Campus Apartments",
+    address: "15 Buswell Street",
+    layouts: ["Apartment Double", "Studio Double", "Studio Single"]
+  },
+  {
+    buildingName: "100 Mountfort Street",
+    campusGroup: "South Campus Apartments",
+    address: "100 Mountfort Street",
+    layouts: ["Apartment Single"]
+  },
+  {
+    buildingName: "509 Park Drive",
+    campusGroup: "South Campus Apartments",
+    address: "509 Park Drive",
+    layouts: ["Apartment Double", "Apartment Single", "Studio Single"]
+  },
+  {
+    buildingName: "StuVi II",
+    campusGroup: "Student Village",
+    address: "33 Harry Agganis Way",
+    layouts: ["Apartment Single", "Suite Double", "Suite Single"]
+  },
+  {
+    buildingName: "StuVi I",
+    campusGroup: "Student Village",
+    address: "10 Buick Street",
+    layouts: ["Apartment Single"]
+  }
+];
 
 /**
- * Split a layout string like "Traditional Double" into its parts.
- * roomType = "Traditional", occupancy = "Double"
+ * Split a layout string like "Traditional Double" into:
+ * { roomType: "Traditional", occupancy: "Double" }
  */
 export function parseLayout(layout) {
   if (!layout) return { roomType: "", occupancy: "" };
+
   const words = layout.trim().split(" ");
   return {
     occupancy: words[words.length - 1],
@@ -182,10 +905,44 @@ export function parseLayout(layout) {
   };
 }
 
-export function getLayoutsForBuilding(building) {
-  return LAYOUTS_BY_BUILDING[building] || [];
+export const LAYOUTS_BY_BUILDING = Object.fromEntries(
+  BUILDINGS.map(({ name, layouts }) => [name, layouts])
+);
+
+export const BUILDINGS_BY_GROUP = BUILDINGS.reduce((acc, building) => {
+  if (!acc[building.group]) acc[building.group] = [];
+  acc[building.group].push(building.name);
+  return acc;
+}, {});
+
+export const ROOM_TYPES = [
+  ...new Set(
+    BUILDINGS.flatMap((building) =>
+      building.layouts.map((layout) => parseLayout(layout).roomType)
+    )
+  ),
+];
+
+export const OCCUPANCIES = [
+  ...new Set(
+    BUILDINGS.flatMap((building) =>
+      building.layouts.map((layout) => parseLayout(layout).occupancy)
+    )
+  ),
+];
+
+export function getLayoutsForBuilding(buildingName) {
+  return LAYOUTS_BY_BUILDING[buildingName] || [];
 }
 
 export function getAllBuildings() {
-  return Object.keys(LAYOUTS_BY_BUILDING);
+  return BUILDINGS.map((building) => building.name);
+}
+
+export function getBuildingsForGroup(groupName) {
+  return BUILDINGS.filter((building) => building.group === groupName);
+}
+
+export function getBuildingByName(buildingName) {
+  return BUILDINGS.find((building) => building.name === buildingName) || null;
 }
