@@ -1,6 +1,16 @@
-import { LAYOUTS_BY_BUILDING, BUILDINGS_BY_GROUP, ROOM_TYPES, OCCUPANCIES, parseLayout, getLayoutsForBuilding } from "./housing-data.js";
+import {
+  CAMPUS_GROUPS,
+  BUILDINGS_BY_GROUP,
+  ROOM_TYPES,
+  OCCUPANCIES,
+  getLayoutsForAddress,
+  getLayoutsForGroups,
+  getBuildingsForGroup,
+  getBuildingByName,
+  getBuildingByAddress,
+} from "./housing-data.js";
 import { state } from "./state.js";
-import { $, show, hide, esc, setErr, setMsg } from "./dom.js";
+import { $, show, hide, esc, setErr, setMsg, getChecked } from "./dom.js";
 import { buildRow, showExpandModal } from "./table-formatter.js";
 
 let callbacks = {
@@ -26,8 +36,8 @@ export function setUiCallbacks(nextCallbacks) {
 // ─── Populate all dropdowns and checkboxes on page load ──────────────────────
 
 export function populateOptions() {
-  // Form: building dropdown with <optgroup> sections
-  populateBuildingSelect("f-building");
+  // Form: campus group dropdown for progressive selection
+  populateCampusGroupSelect("f-campus-group");
 
   // Browse: building filter (optgroup too)
   populateBuildingSelect("fi-building");
@@ -40,15 +50,35 @@ export function populateOptions() {
 
   // Form: "looking for" checkboxes
   appendChecks("w-gender", "wg", ["Male", "Female", "Gender Neutral"]);
+  appendChecks("w-campus-group", "wcg", ["Any", ...CAMPUS_GROUPS]);
+  updateWantedLayoutStyleOptions();
   appendChecks("w-type", "wt", ROOM_TYPES);
   appendChecks("w-occ", "wo", OCCUPANCIES);
   populateBuildingChecks("w-building", "wb");
 
-  // When the form building changes, repopulate the layout dropdown
+  // Progressive current housing flow: campus group -> address -> layout
+  $("f-campus-group")?.addEventListener("change", () => updateAddressOptions());
   $("f-building")?.addEventListener("change", updateLayoutOptions);
 
-  // Initialize layout dropdown (empty until building chosen)
-  updateLayoutOptions();
+  // Looking-for flow: selected campus groups control available layout styles
+  document.querySelectorAll("[name='wcg']").forEach((checkbox) => {
+    checkbox.addEventListener("change", handleWantedCampusGroupChange);
+  });
+
+  // Initialize progressive fields as hidden/disabled until previous selections are made
+  updateAddressOptions();
+}
+
+function populateCampusGroupSelect(selectId) {
+  const select = $(selectId);
+  if (!select) return;
+
+  CAMPUS_GROUPS.forEach((group) => {
+    const opt = document.createElement("option");
+    opt.value = group;
+    opt.textContent = group;
+    select.appendChild(opt);
+  });
 }
 
 function populateBuildingSelect(selectId) {
@@ -90,10 +120,23 @@ function populateBuildingChecks(wrapperId, name) {
 // ─── Layout dropdown (form only) ─────────────────────────────────────────────
 
 export function updateLayoutOptions() {
-  const building = $("f-building")?.value;
-  const layouts = building ? getLayoutsForBuilding(building) : [];
+  const address = $("f-building")?.value;
   const select = $("f-layout");
+  const layoutField = $("f-layout-field");
   if (!select) return;
+
+  if (!address) {
+    select.innerHTML = `<option value="">Select address first...</option>`;
+    select.value = "";
+    select.disabled = true;
+    hide(layoutField);
+    return;
+  }
+
+  const layouts = getLayoutsForAddress(address);
+
+  show(layoutField);
+  select.disabled = false;
 
   select.innerHTML = `<option value="">Select layout…</option>`;
   layouts.forEach((layout) => {
@@ -105,6 +148,91 @@ export function updateLayoutOptions() {
 
   // Reset layout selection when building changes
   select.value = "";
+}
+
+function updateAddressOptions(selectedAddress = "") {
+  const group = $("f-campus-group")?.value || "";
+  const select = $("f-building");
+  const addressField = $("f-address-field");
+  if (!select) return;
+
+  if (!group) {
+    select.disabled = true;
+    select.innerHTML = `<option value="">Select campus group first...</option>`;
+    select.value = "";
+    hide(addressField);
+    updateLayoutOptions();
+    return;
+  }
+
+  const addresses = getBuildingsForGroup(group);
+  select.innerHTML = `<option value="">Select address...</option>`;
+  addresses.forEach((building) => {
+    const opt = document.createElement("option");
+    opt.value = building.address;
+    opt.textContent = building.name === building.address
+      ? building.address
+      : `${building.address} (${building.name})`;
+    select.appendChild(opt);
+  });
+
+  select.disabled = false;
+  show(addressField);
+
+  const hasSelectedAddress = selectedAddress && addresses.some((entry) => entry.address === selectedAddress);
+  select.value = hasSelectedAddress ? selectedAddress : "";
+  updateLayoutOptions();
+}
+
+function getSelectedWantedCampusGroups() {
+  const selected = getChecked("wcg");
+  return selected.includes("Any") ? [...CAMPUS_GROUPS] : selected;
+}
+
+function handleWantedCampusGroupChange(event) {
+  const changed = event.target;
+  const anyCheckbox = document.querySelector("[name='wcg'][value='Any']");
+  const groupCheckboxes = [...document.querySelectorAll("[name='wcg']")].filter((checkbox) => checkbox.value !== "Any");
+  const previouslySelectedLayouts = getChecked("wls");
+
+  if (changed.value === "Any") {
+    groupCheckboxes.forEach((checkbox) => {
+      checkbox.checked = changed.checked;
+    });
+  } else {
+    if (!changed.checked && anyCheckbox) anyCheckbox.checked = false;
+    if (anyCheckbox && groupCheckboxes.every((checkbox) => checkbox.checked)) {
+      anyCheckbox.checked = true;
+    }
+  }
+
+  updateWantedLayoutStyleOptions(previouslySelectedLayouts);
+}
+
+function updateWantedLayoutStyleOptions(selectedLayouts = []) {
+  const wrapper = $("w-layout-style");
+  if (!wrapper) return;
+
+  const selectedGroups = getSelectedWantedCampusGroups();
+  const layouts = getLayoutsForGroups(selectedGroups);
+
+  wrapper.innerHTML = "";
+
+  if (!selectedGroups.length) {
+    wrapper.innerHTML = `<span class="fhint">Select at least one campus group first.</span>`;
+    return;
+  }
+
+  layouts.forEach((layout) => {
+    const label = document.createElement("label");
+    label.className = "check-opt";
+    label.innerHTML = `<input type="checkbox" name="wls" value="${esc(layout)}" /> ${esc(layout)}`;
+
+    const checkbox = label.querySelector("input");
+    if (checkbox) checkbox.checked = selectedLayouts.includes(layout);
+
+    wrapper.appendChild(label);
+  });
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -213,7 +341,10 @@ export function renderTable() {
       const blob = [
         l.currentBuilding, l.layout, l.roomType, l.occupancy,
         l.housingGender, l.pitch, l.otherDetails,
+        l.currentCampusGroup, l.currentAddress,
         ...(l.wantedBuildings || []),
+        ...(l.wantedCampusGroups || []),
+        ...(l.wantedLayoutStyles || []),
         ...(l.wantedTypes || []),
         ...(l.wantedOccupancies || []),
         ...(l.wantedGenders || []),
@@ -286,6 +417,8 @@ export function renderMyPreview() {
 
   const listing = state.myListing;
   const wantedGenders = (listing.wantedGenders || []).join(", ") || "—";
+  const wantedCampusGroups = (listing.wantedCampusGroups || []).join(", ") || "—";
+  const wantedLayoutStyles = (listing.wantedLayoutStyles || []).join(", ") || "—";
   const wantedTypes = (listing.wantedTypes || []).join(", ") || "—";
   const wantedOccs = (listing.wantedOccupancies || []).join(", ") || "—";
   const wantedBuildings = (listing.wantedBuildings || []).join(", ") || "—";
@@ -309,6 +442,8 @@ export function renderMyPreview() {
     <div class="preview-col">
       <div class="preview-looking">
         <div><b>Looking for gender:</b> ${esc(wantedGenders)}</div>
+        <div><b>Campus groups:</b> ${esc(wantedCampusGroups)}</div>
+        <div><b>Layout styles:</b> ${esc(wantedLayoutStyles)}</div>
         <div><b>Room types:</b> ${esc(wantedTypes)}</div>
         <div><b>Occupancies:</b> ${esc(wantedOccs)}</div>
         <div><b>Would consider:</b> ${esc(wantedBuildings)}</div>
@@ -325,7 +460,14 @@ export function renderMyPreview() {
 
 export function fillForm(listing, contact) {
   $("f-gender").value = listing.housingGender || "";
-  $("f-building").value = listing.currentBuilding || "";
+
+  const legacyBuilding = listing.currentBuilding ? getBuildingByName(listing.currentBuilding) : null;
+  const buildingByAddress = listing.currentAddress ? getBuildingByAddress(listing.currentAddress) : null;
+  const campusGroup = listing.currentCampusGroup || buildingByAddress?.group || legacyBuilding?.group || "";
+  const selectedAddress = listing.currentAddress || legacyBuilding?.address || "";
+
+  $("f-campus-group").value = campusGroup;
+  updateAddressOptions(selectedAddress);
 
   // Repopulate layout options for this building, then restore selection
   updateLayoutOptions();
@@ -343,6 +485,20 @@ export function fillForm(listing, contact) {
   $("ct-details").textContent = (listing.otherDetails || "").length;
 
   document.querySelectorAll("[name='wg']").forEach((cb) => { cb.checked = (listing.wantedGenders || []).includes(cb.value); });
+  const wantedCampusGroups = listing.wantedCampusGroups || [];
+  const campusGroupChecks = [...document.querySelectorAll("[name='wcg']")];
+  campusGroupChecks.forEach((cb) => {
+    if (cb.value === "Any") return;
+    cb.checked = wantedCampusGroups.includes(cb.value);
+  });
+  const anyCampusCheckbox = campusGroupChecks.find((cb) => cb.value === "Any");
+  if (anyCampusCheckbox) {
+    anyCampusCheckbox.checked =
+      CAMPUS_GROUPS.length > 0 && CAMPUS_GROUPS.every((group) => wantedCampusGroups.includes(group));
+  }
+
+  updateWantedLayoutStyleOptions(listing.wantedLayoutStyles || []);
+
   document.querySelectorAll("[name='wt']").forEach((cb) => { cb.checked = (listing.wantedTypes || []).includes(cb.value); });
   document.querySelectorAll("[name='wo']").forEach((cb) => { cb.checked = (listing.wantedOccupancies || []).includes(cb.value); });
   document.querySelectorAll("[name='wb']").forEach((cb) => { cb.checked = (listing.wantedBuildings || []).includes(cb.value); });
@@ -366,5 +522,6 @@ export function resetForm() {
   setErr("form-err", "");
   setMsg("success-msg", "");
 
-  updateLayoutOptions(); // clear layout options when building resets
+  updateAddressOptions(); // clear progressive address/layout options when form resets
+  updateWantedLayoutStyleOptions();
 }

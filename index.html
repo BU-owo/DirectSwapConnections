@@ -192,17 +192,27 @@
               </div>
 
               <div class="ffield">
-                <label for="f-building">Current Building <span class="req">*</span></label>
-                <select id="f-building" required><option value="">Select building…</option></select>
+                <label for="f-campus-group">Campus Group <span class="req">*</span></label>
+                <select id="f-campus-group" required>
+                  <option value="">Select campus group…</option>
+                </select>
               </div>
 
-<div class="ffield">
-  <label for="f-layout">Room Layout <span class="req">*</span></label>
-  <select id="f-layout" required>
-    <option value="">Select building first…</option>
-  </select>
-  <p class="fhint">Options update based on your selected building.</p>
-</div>
+              <div class="ffield hidden" id="f-address-field">
+                <label for="f-building">Current Address <span class="req">*</span> <em class="hint">Private</em></label>
+                <select id="f-building" required disabled>
+                  <option value="">Select campus group first…</option>
+                </select>
+                <p class="fhint">This is private and only used to match the correct layout options.</p>
+              </div>
+
+              <div class="ffield hidden" id="f-layout-field">
+                <label for="f-layout">Room Layout <span class="req">*</span></label>
+                <select id="f-layout" required disabled>
+                  <option value="">Select address first…</option>
+                </select>
+                <p class="fhint">Options update based on your selected address.</p>
+              </div>
 
               <div class="ffield">
                 <label>Bringing a Roommate? <span class="req">*</span></label>
@@ -235,6 +245,17 @@
               <div class="ffield">
                 <label>Gender Housing <span class="req">*</span> <em class="hint">All that apply</em></label>
                 <div class="checks-inline" id="w-gender"></div>
+              </div>
+
+              <div class="ffield full">
+                <label>Campus Groups <span class="req">*</span> <em class="hint">All that apply</em></label>
+                <p class="fhint">Selecting "Any" automatically selects all campus groups.</p>
+                <div class="checks-inline checks-row" id="w-campus-group"></div>
+              </div>
+
+              <div class="ffield full">
+                <label>Layout Styles <span class="req">*</span> <em class="hint">Based on selected campus groups</em></label>
+                <div class="checks-inline checks-row" id="w-layout-style"></div>
               </div>
 
               <div class="ffield">
