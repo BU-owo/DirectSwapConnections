@@ -26,15 +26,3 @@ export function setMsg(id, html) {
   element.innerHTML = html;
   html ? show(element) : hide(element);
 }
-
-// ... existing code ...
-
-export function esc(s) {
-  return String(s ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-export function getChecked(name) {
-  return [...document.querySelectorAll(`[name="${name}"]:checked`)].map(cb => cb.value);
-}
