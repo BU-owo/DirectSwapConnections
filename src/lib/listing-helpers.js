@@ -1,13 +1,23 @@
+/**
+ * Listing Helpers
+ * Shared helpers for payload normalization, profanity masking, timestamps, and gender constraints.
+ */
 import { parseLayout } from "../../js/housing-data.js";
 
 export const LARGE_STYLE_RESIDENCES_GROUP = "Large Traditional-Style Residences";
 
 const PROFANITY_PATTERN = /\b(fuck|fucking|shit|bitch|asshole|dick|bastard|whore|slut|cunt|motherfucker|piss)\b/gi;
 
+/**
+ * Replaces profanity matches with equal-length asterisks for lightweight client-side moderation.
+ */
 export function censorProfanity(value) {
   return String(value ?? "").replace(PROFANITY_PATTERN, (match) => "*".repeat(match.length));
 }
 
+/**
+ * Converts Firestore Timestamp/date-like values into epoch milliseconds for stable sorting.
+ */
 export function toMs(timestamp) {
   if (!timestamp) return 0;
   if (typeof timestamp.toMillis === "function") return timestamp.toMillis();
@@ -16,6 +26,9 @@ export function toMs(timestamp) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
+/**
+ * Maps validated form state to the listing document shape persisted in Firestore.
+ */
 export function buildListingPayload(formValues, selectedBuilding) {
   const { roomType, occupancy } = parseLayout(formValues.layout);
 
@@ -44,6 +57,9 @@ export function buildListingPayload(formValues, selectedBuilding) {
   };
 }
 
+/**
+ * Maps contact fields to Firestore payload while applying moderation to free-text fields.
+ */
 export function buildContactPayload(formValues) {
   return {
     redditUsername: censorProfanity(formValues.redditUsername.trim()),
@@ -52,6 +68,9 @@ export function buildContactPayload(formValues) {
   };
 }
 
+/**
+ * Returns allowed "wanted" housing genders based on the user's current housing assignment.
+ */
 export function allowedWantedGenders(housingGender) {
   const byGender = {
     Male: new Set(["Male", "Gender Neutral"]),

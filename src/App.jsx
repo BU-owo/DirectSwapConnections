@@ -1,3 +1,7 @@
+/**
+ * App Shell
+ * Renders top-level navigation, hero, footer, and route mapping for browse/submit pages.
+ */
 import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import { AppProvider, useAppContext } from "./context/AppContext";

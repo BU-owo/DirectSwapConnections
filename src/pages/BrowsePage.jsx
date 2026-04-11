@@ -1,3 +1,7 @@
+/**
+ * Browse Page
+ * Shows active listings with filter/search/sort controls and a signed-in user's listing preview.
+ */
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ExpandModal from "../components/ExpandModal";
@@ -54,6 +58,9 @@ function normalize(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+/**
+ * Splits "Layout Occupancy" strings (for example, "Suite Double") into sortable parts.
+ */
 function splitLayout(layout) {
   const parts = String(layout || "").trim().split(" ");
   if (parts.length < 2) return { layoutType: layout, occupancy: "" };
@@ -63,6 +70,9 @@ function splitLayout(layout) {
   };
 }
 
+/**
+ * Applies the same layout ordering used in submit flow so UI is consistent across pages.
+ */
 function orderLayouts(layouts) {
   return [...layouts].sort((a, b) => {
     const splitA = splitLayout(a);
@@ -99,6 +109,7 @@ export default function BrowsePage() {
   const largeResidenceAreas = useMemo(() => getLargeResidenceAreas(), []);
 
   const allLayouts = useMemo(() => {
+    // Filter cascade: campus group -> large residence area (if applicable) -> available layouts.
     if (!filters.campusGroup) {
       return orderLayouts(getLayoutsForGroups(CAMPUS_GROUPS));
     }
@@ -120,6 +131,7 @@ export default function BrowsePage() {
   }, [filters.campusGroup, filters.largeResidenceArea]);
 
   const filteredListings = useMemo(() => {
+    // Do not show your own listing in the browse table; it appears in the preview card.
     const mineExcluded = listings.filter((item) => item.id !== user?.uid);
 
     let next = mineExcluded;
@@ -135,6 +147,7 @@ export default function BrowsePage() {
     if (filters.search.trim()) {
       const terms = filters.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
       next = next.filter((item) => {
+        // Keyword search runs against both current-housing and looking-for fields.
         const haystack = [
           item.currentBuilding,
           item.currentCampusGroup,

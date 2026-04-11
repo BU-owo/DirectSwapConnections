@@ -1,3 +1,7 @@
+/**
+ * App Context
+ * Centralizes auth session state and Firestore listing/contact operations for page components.
+ */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   collection,
@@ -25,6 +29,7 @@ export function AppProvider({ children }) {
   const [listings, setListings] = useState([]);
   const [contactsMap, setContactsMap] = useState({});
 
+  // Keep UI auth-aware in real time.
   useEffect(() => {
     if (!auth) {
       setAuthReady(true);
@@ -38,6 +43,7 @@ export function AppProvider({ children }) {
     return () => unsub();
   }, []);
 
+  // Stream listings so browse updates immediately when documents change.
   useEffect(() => {
     if (!db) {
       setListings([]);
@@ -59,6 +65,7 @@ export function AppProvider({ children }) {
     return () => unsub();
   }, []);
 
+  // Load contact details only for signed-in sessions.
   useEffect(() => {
     if (!db || !user) {
       setContactsMap({});
@@ -124,6 +131,7 @@ export function AppProvider({ children }) {
       ...(isNew ? { submittedAt: serverTimestamp() } : {}),
     };
 
+    // Commit listing + contact atomically to avoid partially saved records.
     const batch = writeBatch(db);
     if (isNew) {
       batch.set(listingRef, listingData);

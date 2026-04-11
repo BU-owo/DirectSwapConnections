@@ -1,3 +1,7 @@
+/**
+ * Submit Page
+ * Collects current housing + preferences, validates constraints, and saves listing/contact data.
+ */
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CAMPUS_GROUPS,
@@ -79,6 +83,9 @@ const DEFAULT_FORM = {
 
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
+/**
+ * Splits a layout string so type/occupancy can be ordered consistently in dropdowns.
+ */
 function splitLayout(layout) {
   const parts = String(layout || "").trim().split(" ");
   if (parts.length < 2) return { layoutType: layout, occupancy: "" };
@@ -88,6 +95,9 @@ function splitLayout(layout) {
   };
 }
 
+/**
+ * Sorts layout options by design type first, then occupancy (Single -> Quad), then alphabetically.
+ */
 function orderLayouts(layouts) {
   return [...layouts].sort((a, b) => {
     const splitA = splitLayout(a);
@@ -106,6 +116,9 @@ function orderLayouts(layouts) {
   });
 }
 
+/**
+ * Checkbox helper: returns a next array with value inserted/removed based on checked state.
+ */
 function toggleFromArray(arr, value, checked) {
   if (checked) return arr.includes(value) ? arr : [...arr, value];
   return arr.filter((item) => item !== value);
@@ -126,6 +139,7 @@ export default function SubmitPage() {
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Keep form state synchronized with auth/listing context transitions.
   useEffect(() => {
     if (!user) {
       setForm(DEFAULT_FORM);
@@ -170,6 +184,7 @@ export default function SubmitPage() {
 
   const isLargeCurrent = form.currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP;
 
+  // Current address options depend on selected campus group and (for large residences) selected area.
   const currentAddresses = useMemo(() => {
     if (!form.currentCampusGroup) return [];
     const addresses = getBuildingsForGroup(form.currentCampusGroup);
@@ -191,6 +206,7 @@ export default function SubmitPage() {
   }, [form.wantedCampusGroups, form.wantedLargeResidenceAreas, wantedLargeSelected]);
 
   const availableWantedLayouts = useMemo(() => {
+    // Merge layouts from selected non-large groups with selected large-residence buildings.
     const nonLargeGroups = form.wantedCampusGroups.filter((group) => group !== LARGE_STYLE_RESIDENCES_GROUP);
     const fromGroups = nonLargeGroups.length ? getLayoutsForGroups(nonLargeGroups) : [];
     const fromLarge = wantedLargeSelected
@@ -284,6 +300,7 @@ export default function SubmitPage() {
   }
 
   function validateForm() {
+    // Validate progressive dependencies in the same order users complete the form.
     const totalPeople = Number(form.totalPeople);
 
     if (!form.housingGender) return "Select your housing assignment gender.";
@@ -352,6 +369,7 @@ export default function SubmitPage() {
 
     setBusy(true);
     try {
+      // Build normalized payloads before Firestore writes.
       const listingPayload = buildListingPayload(form, selectedBuilding);
       const contactPayload = buildContactPayload(form);
       await saveListing(listingPayload, contactPayload);
