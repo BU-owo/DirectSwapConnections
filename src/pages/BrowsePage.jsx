@@ -414,7 +414,13 @@ export default function BrowsePage() {
               <tr>
                 <td colSpan={6} className="td-empty">
                   <div className="td-empty-icon">🏠</div>
-                  <p>{hasAnyFilter ? "No listings match your search." : "No listings yet - be the first to submit!"}</p>
+                  <p>
+                    {hasAnyFilter
+                      ? "No listings match your search."
+                      : myListing
+                        ? "No other listings yet, check back soon"
+                        : "No listings yet - be the first to submit!"}
+                  </p>
                 </td>
               </tr>
             ) : (
