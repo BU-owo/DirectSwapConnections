@@ -2,9 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Listings — anyone can read, only @bu.edu Google users can write their own
+    // Listings — only signed-in @bu.edu users can read/write their own listing
     match /listings/{userId} {
-      allow read: if true;
+      allow read: if request.auth != null
+                  && request.auth.token.email.matches(".*@bu\\.edu");
 
       allow create: if request.auth != null
                     && request.auth.uid == userId
