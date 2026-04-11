@@ -511,6 +511,7 @@ export default function SubmitPage() {
                     </option>
                   ))}
                 </select>
+                <p className="fhint">This will be kept private. It is only used to select the correct layout options.</p>
               </div>
 
               <div className="ffield">

@@ -82,7 +82,7 @@ function orderLayouts(layouts) {
 }
 
 export default function BrowsePage() {
-  const { listings, user, contactsMap } = useAppContext();
+  const { listings, user, contactsMap, myListing } = useAppContext();
   const [expandedId, setExpandedId] = useState("");
   const [filters, setFilters] = useState({
     search: "",
@@ -185,6 +185,61 @@ export default function BrowsePage() {
 
   return (
     <div id="panel-browse" className="panel">
+      {user && myListing ? (
+        <div className="my-preview">
+          <div className="my-preview-head">
+            <div className="my-preview-label">
+              <span className="preview-dot"></span>
+              Your Active Listing - this is what others see
+            </div>
+            <button className="btn-ghost-xs" onClick={() => navigate("/submit")}>Edit</button>
+          </div>
+          <div className="my-preview-body">
+            <div className="preview-col">
+              <div className="preview-badges">
+                <span className="badge badge-red">{myListing.currentCampusGroup || "-"}</span>
+                {myListing.currentLargeResidenceArea ? (
+                  <span className="badge badge-grey">{myListing.currentLargeResidenceArea}</span>
+                ) : null}
+                <span className="badge badge-grey">{myListing.layout || "-"}</span>
+                <span className="badge badge-blue">{myListing.housingGender || "-"}</span>
+                <span className="badge badge-grey">Laundry: {myListing.laundryInBuilding ? "Yes" : "No"}</span>
+                {myListing.bringingRoommate ? (
+                  <span className="badge badge-gold">
+                    +Roommate{myListing.totalPeople ? ` (${myListing.totalPeople} total)` : ""}
+                  </span>
+                ) : null}
+              </div>
+              <div>
+                <div className="preview-pitch-label">Your pitch</div>
+                <div className="preview-pitch">{myListing.pitch || "-"}</div>
+                {myListing.otherDetails ? (
+                  <div style={{ fontSize: ".82rem", color: "var(--sub)", fontStyle: "italic", marginTop: 4 }}>
+                    {myListing.otherDetails}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="preview-col">
+              <div className="preview-looking">
+                <div><b>Looking for gender:</b> {(myListing.wantedGenders || []).join(", ") || "-"}</div>
+                <div><b>Campus groups:</b> {(myListing.wantedCampusGroups || []).join(", ") || "-"}</div>
+                {(myListing.wantedCampusGroups || []).includes(LARGE_STYLE_RESIDENCES_GROUP) ? (
+                  <>
+                    <div><b>Large residence areas:</b> {(myListing.wantedLargeResidenceAreas || []).join(", ") || "-"}</div>
+                    <div><b>Large residence buildings:</b> {(myListing.wantedLargeResidenceBuildings || []).join(", ") || "-"}</div>
+                  </>
+                ) : null}
+                <div><b>Layout styles:</b> {(myListing.wantedLayoutStyles || []).join(", ") || "-"}</div>
+              </div>
+              <div className="preview-contact-note">
+                Contact info is visible to signed-in BU students
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {!user ? (
         <div className="notice-bar">
           <strong>Sign in with your BU Google account</strong> to see contact info.
