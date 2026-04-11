@@ -30,6 +30,19 @@ function Layout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 980;
+    if (menuOpen && isMobile) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+
+    document.body.style.overflow = "";
+    return () => {};
+  }, [menuOpen]);
+
   async function handleSignIn() {
     setAuthError("");
     try {
