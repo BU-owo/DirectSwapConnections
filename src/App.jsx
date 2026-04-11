@@ -2,21 +2,39 @@
  * App Shell
  * Renders top-level navigation, hero, footer, and route mapping for browse/submit pages.
  */
-import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import BrowsePage from "./pages/BrowsePage";
 import SubmitPage from "./pages/SubmitPage";
 
 function Layout() {
-  const { user, signInWithGoogle, signOutUser, firebaseConfigError } = useAppContext();
+  const { user, myListing, signInWithGoogle, signOutUser, firebaseConfigError } = useAppContext();
   const [authError, setAuthError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth > 980) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   async function handleSignIn() {
     setAuthError("");
     try {
       await signInWithGoogle();
+      setMenuOpen(false);
     } catch (error) {
       setAuthError(error.message || "Sign in failed.");
     }
@@ -25,12 +43,24 @@ function Layout() {
   async function handleSignOut() {
     setAuthError("");
     await signOutUser();
+    setMenuOpen(false);
   }
 
   return (
     <>
-      <nav>
+      <nav className={menuOpen ? "menu-open" : ""}>
         <div className="nav-brand">Direct Swap <span>Connections</span></div>
+        <button
+          type="button"
+          className="nav-menu-toggle"
+          aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((prev) => !prev)}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <div className="nav-menu">
           <div className="nav-center">
             <NavLink
@@ -48,13 +78,39 @@ function Layout() {
           </div>
           <div className="nav-end">
             {user ? (
-              <div id="state-in">
-                <img className="nav-avatar" src={user.photoURL || ""} alt="" />
-                <span className="nav-email-text">{user.email}</span>
-                <button className="btn-nav-signout" onClick={handleSignOut}>Sign Out</button>
-              </div>
+              <>
+                <div id="state-in">
+                  <img className="nav-avatar" src={user.photoURL || ""} alt="" />
+                  <span className="nav-email-text">{user.email}</span>
+                  <button className="btn-nav-signout" onClick={handleSignOut}>Sign Out</button>
+                </div>
+                <div className="nav-mobile-auth-block">
+                  <div className="nav-mobile-profile">
+                    <img className="nav-avatar" src={user.photoURL || ""} alt="" />
+                    <div className="nav-mobile-profile-text">
+                      <strong>Signed in</strong>
+                      <span>{user.email}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn-nav-menu-action"
+                    onClick={() => {
+                      navigate("/submit");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {myListing ? "Update Listing" : "Submit Listing"}
+                  </button>
+                  <button className="btn-nav-menu-signout" onClick={handleSignOut}>Sign Out</button>
+                </div>
+              </>
             ) : (
-              <button className="btn-google-nav" onClick={handleSignIn}>Sign In with Google</button>
+              <>
+                <button className="btn-google-nav" onClick={handleSignIn}>Sign In with Google</button>
+                <div className="nav-mobile-auth-block">
+                  <button className="btn-google-nav" onClick={handleSignIn}>Sign In with Google</button>
+                </div>
+              </>
             )}
           </div>
         </div>

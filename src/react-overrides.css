@@ -8,6 +8,13 @@
   gap: 0.55rem;
 }
 
+@media (max-width: 980px) {
+  #state-in,
+  .nav-end > .btn-google-nav {
+    display: none;
+  }
+}
+
 .main-card {
   background: #fff;
   border: 1px solid var(--border);
