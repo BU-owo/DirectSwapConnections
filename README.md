@@ -1,12 +1,28 @@
-# DirectSwapConnections
 # BU Direct Swap Connections
 
-A housing swap platform for BU students — GitHub Pages frontend, Firebase backend.
-Created by BUowo and Jayden Chon
+A housing swap platform for BU students built with React + Vite and Firebase.
 
-## How It Works
-- Sign in with a **@bu.edu email** (testing)
-- Submit your housing listing by filling out the form
-- Browse other listings and filter by gender, building, occupancy, or roommate status
-- **Contact info is locked** until you submit your own listing
-- Update or remove your listing any time
+## Tech Stack
+- React
+- React Router
+- Firebase Authentication
+- Cloud Firestore
+- Vite
+
+## Features
+- Google sign-in restricted to `@bu.edu`
+- Submit, update, and remove swap listings
+- Dynamic housing form with campus group, area, address, and layout dependencies
+- Listing browse route with filters, sorting, and search
+- Contact info hidden unless signed in
+
+## Local Development
+1. Install dependencies:
+	`npm install`
+2. Start the dev server:
+	`npm run dev`
+3. Build for production:
+	`npm run build`
+
+## Firebase Config
+The app expects `firebase-config.js` to define `window.__FIREBASE_CONFIG__`.
