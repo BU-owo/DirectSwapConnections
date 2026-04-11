@@ -895,8 +895,32 @@ export const BUILDINGS = housingData.map((entry) => ({
   name: entry.buildingName,
   group: entry.campusGroup,
   address: entry.address,
+  area: "",
   layouts: [...entry.layouts],
 }));
+
+export const LARGE_STYLE_RESIDENCES_GROUP = "Large Traditional-Style Residences";
+
+export const LARGE_STYLE_AREA_BY_BUILDING = {
+  "Rich Hall": "West Campus",
+  "Claflin Hall": "West Campus",
+  "Sleeper Hall": "West Campus",
+  "1019 Commonwealth Avenue": "West Campus",
+  "Warren Towers": "Central Campus",
+  "Danielsen Hall": "East Campus",
+  "610 Beacon Street": "East Campus",
+  "575 Commonwealth Avenue": "East Campus",
+  "The Towers": "East Campus",
+  "Kilachand Hall": "East Campus",
+};
+
+export const LARGE_STYLE_AREAS = ["West Campus", "Central Campus", "East Campus"];
+
+BUILDINGS.forEach((building) => {
+  if (building.group === LARGE_STYLE_RESIDENCES_GROUP) {
+    building.area = LARGE_STYLE_AREA_BY_BUILDING[building.name] || "";
+  }
+});
 
 export const CAMPUS_GROUPS = [...new Set(BUILDINGS.map((building) => building.group))];
 
@@ -905,6 +929,7 @@ export const ADDRESSES_BY_GROUP = BUILDINGS.reduce((acc, building) => {
   acc[building.group].push({
     name: building.name,
     address: building.address,
+    area: building.area,
     layouts: building.layouts,
   });
   return acc;
@@ -983,6 +1008,22 @@ export function getLayoutsForGroups(groupNames = []) {
       )
     ),
   ];
+}
+
+export function getLargeResidenceAreas() {
+  return [...LARGE_STYLE_AREAS];
+}
+
+export function getLargeResidenceBuildings(selectedAreas = []) {
+  const largeBuildings = BUILDINGS.filter((building) => building.group === LARGE_STYLE_RESIDENCES_GROUP);
+  if (!selectedAreas.length) return [];
+  return largeBuildings.filter((building) => selectedAreas.includes(building.area));
+}
+
+export function getLayoutsForLargeResidenceSelections(selectedAreas = [], selectedBuildingNames = []) {
+  const buildings = getLargeResidenceBuildings(selectedAreas)
+    .filter((building) => selectedBuildingNames.includes(building.name));
+  return [...new Set(buildings.flatMap((building) => building.layouts))];
 }
 
 export function getBuildingByAddress(address) {

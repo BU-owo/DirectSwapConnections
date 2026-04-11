@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { $, show, hide } from "./dom.js";
 import { auth, signOut } from "./firebase-client.js";
 import { doSignIn } from "./auth.js";
-import { showPanel, updateFilterActive, clearFilters, renderTable } from "./ui.js";
+import { showPanel, updateFilterActive, clearFilters, renderTable, syncRoommateTotalPeopleField } from "./ui.js";
 import { handleSubmit, handleDelete } from "./data.js";
 
 export function bindEvents() {
@@ -78,17 +78,10 @@ export function bindEvents() {
   $("the-form")?.addEventListener("submit", handleSubmit);
   $("btn-delete")?.addEventListener("click", handleDelete);
 
-  $("btn-sel-all")?.addEventListener("click", () => {
-    document.querySelectorAll("[name='wb']").forEach((checkbox) => {
-      checkbox.checked = true;
-    });
+  document.querySelectorAll("[name='f-roommate']").forEach((radio) => {
+    radio.addEventListener("change", syncRoommateTotalPeopleField);
   });
-
-  $("btn-clr-all")?.addEventListener("click", () => {
-    document.querySelectorAll("[name='wb']").forEach((checkbox) => {
-      checkbox.checked = false;
-    });
-  });
+  syncRoommateTotalPeopleField();
 
   $("f-pitch")?.addEventListener("input", () => {
     $("ct-pitch").textContent = $("f-pitch").value.length;

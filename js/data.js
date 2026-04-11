@@ -12,8 +12,18 @@ import {
   onSnapshot,
   serverTimestamp,
 } from "./firebase-client.js";
-import { parseLayout, getBuildingByAddress } from "./housing-data.js";
+import {
+  parseLayout,
+  getBuildingByAddress,
+  LARGE_STYLE_RESIDENCES_GROUP,
+} from "./housing-data.js";
 import { renderTable, renderMyPreview, fillForm, resetForm, showPanel } from "./ui.js";
+
+const PROFANITY_PATTERN = /\b(fuck|fucking|shit|bitch|asshole|dick|bastard|whore|slut|cunt|motherfucker|piss)\b/gi;
+
+function censorProfanityInText(value) {
+  return String(value ?? "").replace(PROFANITY_PATTERN, (match) => "*".repeat(match.length));
+}
 
 export function startListingsListener() {
   if (state.unsubListings) state.unsubListings();
@@ -85,41 +95,62 @@ export async function handleSubmit(event) {
 
   const housingGender = $("f-gender").value;
   const currentCampusGroup = $("f-campus-group").value;
+  const currentLargeResidenceArea = $("f-large-area")?.value || "";
   const currentAddress = $("f-building").value;
   const layout = $("f-layout").value; // e.g. "Traditional Double"
   const roommateEl = document.querySelector("[name='f-roommate']:checked");
-  const pitch = $("f-pitch").value.trim();
-  const otherDetails = $("f-details").value.trim();
+  const laundryEl = document.querySelector("[name='f-laundry']:checked");
+  const totalPeopleInput = $("f-total-people")?.value || "";
+  const totalPeople = Number(totalPeopleInput);
+  const pitch = censorProfanityInText($("f-pitch").value.trim());
+  const otherDetails = censorProfanityInText($("f-details").value.trim());
   const wantedGenders     = getChecked("wg");
   const wantedCampusGroups = [...document.querySelectorAll("[name='wcg']")]
     .filter((checkbox) => checkbox.value !== "Any" && checkbox.checked)
     .map((checkbox) => checkbox.value);
+  const wantedLargeResidenceAreas = getChecked("wla");
+  const wantedLargeResidenceBuildings = getChecked("wlb");
   const wantedLayoutStyles = getChecked("wls");
-  const wantedTypes       = getChecked("wt");
-  const wantedOccupancies = getChecked("wo");
-  const wantedBuildings   = getChecked("wb");
-  const reddit = $("f-reddit").value.trim();
+  const reddit = censorProfanityInText($("f-reddit").value.trim());
   const phone  = $("f-phone").value.trim();
-  const other  = $("f-other").value.trim();
+  const other  = censorProfanityInText($("f-other").value.trim());
+  const agreedToTerms = $("f-terms")?.checked;
 
   // Validation
   if (!housingGender) return setErr("form-err", "Select your housing assignment gender.");
   if (!currentCampusGroup) return setErr("form-err", "Select your campus group.");
+  if (currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP && !currentLargeResidenceArea) {
+    return setErr("form-err", "Select your Large Residence area.");
+  }
   if (!currentAddress) return setErr("form-err", "Select your current address.");
   if (!layout) return setErr("form-err", "Select your room layout.");
   if (!roommateEl) return setErr("form-err", "Indicate whether you're bringing a roommate.");
+  if (!laundryEl) return setErr("form-err", "Select whether laundry is in the building.");
+  if (roommateEl.value === "true") {
+    if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 10) {
+      return setErr("form-err", "If bringing a roommate, enter total people as a whole number from 2 to 10.");
+    }
+  }
   if (!pitch) return setErr("form-err", "Describe your room's best features.");
   if (!wantedGenders.length) return setErr("form-err", "Select at least one gender housing preference.");
   if (!wantedCampusGroups.length) return setErr("form-err", "Select at least one campus group you'd consider.");
+  if (wantedCampusGroups.includes(LARGE_STYLE_RESIDENCES_GROUP) && !wantedLargeResidenceAreas.length) {
+    return setErr("form-err", "Select at least one Large Residence area you'd consider.");
+  }
+  if (wantedCampusGroups.includes(LARGE_STYLE_RESIDENCES_GROUP) && !wantedLargeResidenceBuildings.length) {
+    return setErr("form-err", "Select at least one Large Residence building you'd consider.");
+  }
   if (!wantedLayoutStyles.length) return setErr("form-err", "Select at least one layout style you'd consider.");
-  if (!wantedTypes.length) return setErr("form-err", "Select at least one room type you'd consider.");
-  if (!wantedOccupancies.length) return setErr("form-err", "Select at least one occupancy you'd consider.");
-  if (!wantedBuildings.length) return setErr("form-err", "Select at least one building you'd consider.");
   if (!reddit && !phone && !other) return setErr("form-err", "Add at least one contact method beyond your BU email.");
+  if (!agreedToTerms) return setErr("form-err", "You must agree to the terms and conditions to submit your listing.");
 
   const selectedBuilding = getBuildingByAddress(currentAddress);
   if (!selectedBuilding) {
     return setErr("form-err", "Could not match that address to BU housing data. Please reselect your campus group and address.");
+  }
+
+  if (currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP && selectedBuilding.area !== currentLargeResidenceArea) {
+    return setErr("form-err", "Selected building does not match the chosen Large Residence area.");
   }
 
   // Split "Traditional Double" → roomType: "Traditional", occupancy: "Double"
@@ -141,19 +172,21 @@ export async function handleSubmit(event) {
       housingGender,
       currentBuilding: selectedBuilding.name,
       currentCampusGroup,
+      currentLargeResidenceArea: currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP ? currentLargeResidenceArea : "",
       currentAddress,
       layout,       // full string, e.g. "Traditional Double"
       roomType,     // "Traditional" — used by browse type filter
       occupancy,    // "Double"      — used by browse occupancy filter
       bringingRoommate: roommateEl.value === "true",
+      laundryInBuilding: laundryEl.value === "true",
+      totalPeople: roommateEl.value === "true" ? totalPeople : null,
       pitch,
       otherDetails,
       wantedGenders,
       wantedCampusGroups,
+      wantedLargeResidenceAreas,
+      wantedLargeResidenceBuildings,
       wantedLayoutStyles,
-      wantedTypes,
-      wantedOccupancies,
-      wantedBuildings,
       updatedAt: now,
       ...(isNew && { submittedAt: now }),
     };

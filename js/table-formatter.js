@@ -1,5 +1,7 @@
 import { esc } from "./dom.js";
 
+const LARGE_STYLE_RESIDENCES_GROUP = "Large Traditional-Style Residences";
+
 export function buildRow(listing, currentUser, contactsMap) {
   const date = listing.submittedAt?.toDate
     ? listing.submittedAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -23,12 +25,19 @@ export function buildRow(listing, currentUser, contactsMap) {
   const genderBadge = `<span class="badge badge-gender">${esc(listing.housingGender || "—")}</span>`;
   const typeBadge = `<span class="badge badge-type">${esc(listing.roomType || "—")}</span>`;
   const occBadge = `<span class="badge badge-occ">${esc(listing.occupancy || "—")}</span>`;
-  const infoBadges = `${genderBadge} ${typeBadge} ${occBadge}`;
+  const laundryBadge = `<span class="badge badge-grey">Laundry: ${listing.laundryInBuilding ? "Yes" : "No"}</span>`;
+  const largeAreaBadge = listing.currentLargeResidenceArea
+    ? `<span class="badge badge-grey">${esc(listing.currentLargeResidenceArea)}</span>`
+    : "";
+  const infoBadges = `${genderBadge} ${typeBadge} ${occBadge} ${laundryBadge} ${largeAreaBadge}`;
 
   // Looking for compact display
   const wg = (listing.wantedGenders || []).join(", ") || "—";
-  const wt = (listing.wantedTypes || []).join(", ") || "—";
-  const wo = (listing.wantedOccupancies || []).join(", ") || "—";
+  const wcg = (listing.wantedCampusGroups || []).join(", ") || "—";
+  const wla = (listing.wantedLargeResidenceAreas || []).join(", ") || "—";
+  const wlb = (listing.wantedLargeResidenceBuildings || []).join(", ") || "—";
+  const wls = (listing.wantedLayoutStyles || []).join(", ") || "—";
+  const showLargeDetails = (listing.wantedCampusGroups || []).includes(LARGE_STYLE_RESIDENCES_GROUP);
 
   // Room pitch (truncated with expand option)
   const pitchPreview = listing.pitch ? (listing.pitch.length > 80 ? listing.pitch.substring(0, 77) + "..." : listing.pitch) : "—";
@@ -36,7 +45,9 @@ export function buildRow(listing, currentUser, contactsMap) {
   const expandBtn = hasLongPitch ? `<button class="expand-btn" data-listing-id="${listing.id}" title="Expand">→</button>` : "";
 
   // Roommate badge
-  const roommateBadge = listing.bringingRoommate ? `<span class="badge badge-roommate">+Roommate</span>` : "";
+  const roommateBadge = listing.bringingRoommate
+    ? `<span class="badge badge-roommate">+Roommate${listing.totalPeople ? ` (${esc(listing.totalPeople)} total)` : ""}</span>`
+    : "";
 
   return `<tr data-listing-id="${listing.id}">
     <td class="td-building">
@@ -53,8 +64,11 @@ export function buildRow(listing, currentUser, contactsMap) {
     <td class="td-looking">
       <div class="looking-text">
         <strong>Gender:</strong> ${esc(wg)}<br>
-        <strong>Type:</strong> ${esc(wt)}<br>
-        <strong>Occ:</strong> ${esc(wo)}
+        <strong>Group:</strong> ${esc(wcg)}<br>
+        ${showLargeDetails
+          ? `<strong>Large area:</strong> ${esc(wla)}<br><strong>Large building:</strong> ${esc(wlb)}<br>`
+          : ""}
+        <strong>Layout:</strong> ${esc(wls)}
       </div>
     </td>
     <td class="td-contact">${contactCell}</td>
