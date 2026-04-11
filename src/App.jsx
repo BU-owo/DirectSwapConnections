@@ -62,7 +62,13 @@ function Layout() {
   return (
     <>
       <nav className={menuOpen ? "menu-open" : ""}>
-        <div className="nav-brand">Direct Swap <span>Connections</span></div>
+        <NavLink
+          to="/browse"
+          className="nav-brand"
+          onClick={() => setMenuOpen(false)}
+        >
+          Direct Swap <span>Connections</span>
+        </NavLink>
         <button
           type="button"
           className="nav-menu-toggle"

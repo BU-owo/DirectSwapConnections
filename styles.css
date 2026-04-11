@@ -20,6 +20,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-text-size-adjust: 100%;
+  padding-top: 62px;
 }
 html, body { overflow-x: hidden; }
 .hidden { display: none !important; }
@@ -28,12 +29,13 @@ html, body { overflow-x: hidden; }
 nav {
   background: var(--red); height: 62px; padding: 0 1.75rem;
   display: flex; align-items: center; gap: 1rem;
-  position: sticky; top: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   box-shadow: 0 2px 10px rgba(0,0,0,.22);
 }
 .nav-brand {
   font-family: 'DM Serif Display', Georgia, serif;
   font-size: 1.15rem; color: #fff; letter-spacing: -.01em; flex-shrink: 0;
+  text-decoration: none;
 }
 .nav-brand span { color: var(--gold); }
 .nav-menu {
