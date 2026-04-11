@@ -1,8 +1,6 @@
 import {
   CAMPUS_GROUPS,
   BUILDINGS_BY_GROUP,
-  ROOM_TYPES,
-  OCCUPANCIES,
   LARGE_STYLE_RESIDENCES_GROUP,
   getLargeResidenceAreas,
   getLargeResidenceBuildings,
@@ -84,11 +82,9 @@ export function populateOptions() {
   // Browse: building filter (optgroup too)
   populateBuildingSelect("fi-building");
 
-  // Browse: room type filter
-  appendOpts("fi-type", ROOM_TYPES);
-
-  // Browse: occupancy filter
-  appendOpts("fi-occ", OCCUPANCIES);
+  // Browse: campus group + layout filters
+  appendOpts("fi-campus-group", [...CAMPUS_GROUPS].sort((a, b) => naturalSort.compare(a, b)));
+  appendOpts("fi-layout", getLayoutsForGroups(CAMPUS_GROUPS).sort((a, b) => naturalSort.compare(a, b)));
 
   // Form: "looking for" checkboxes
   appendChecks("w-gender", "wg", ["Male", "Female", "Gender Neutral"]);
@@ -96,6 +92,7 @@ export function populateOptions() {
   updateWantedLayoutStyleOptions();
 
   // Progressive current housing flow: campus group -> address -> layout
+  $("f-gender")?.addEventListener("change", syncWantedGenderOptions);
   $("f-campus-group")?.addEventListener("change", () => updateAddressOptions());
   $("f-large-area")?.addEventListener("change", () => updateAddressOptions());
   $("f-building")?.addEventListener("change", updateLayoutOptions);
@@ -121,6 +118,30 @@ export function populateOptions() {
   // Initialize progressive fields as hidden/disabled until previous selections are made
   updateAddressOptions();
   syncLargeResidenceLookingForFilters();
+  syncWantedGenderOptions();
+}
+
+export function syncWantedGenderOptions() {
+  const currentHousingGender = $("f-gender")?.value || "";
+  const genderChecks = [...document.querySelectorAll("[name='wg']")];
+
+  const allowedByCurrent = {
+    Male: new Set(["Male", "Gender Neutral"]),
+    Female: new Set(["Female", "Gender Neutral"]),
+    "Gender Neutral": new Set(["Male", "Female", "Gender Neutral"]),
+  };
+
+  const allowed = allowedByCurrent[currentHousingGender] || new Set(["Male", "Female", "Gender Neutral"]);
+
+  genderChecks.forEach((checkbox) => {
+    const label = checkbox.closest("label");
+    const enabled = allowed.has(checkbox.value);
+
+    checkbox.disabled = !enabled;
+    if (!enabled) checkbox.checked = false;
+
+    if (label) label.classList.toggle("is-disabled", !enabled);
+  });
 }
 
 function populateCampusGroupSelect(selectId) {
@@ -675,7 +696,7 @@ export function updateFilterActive(id) {
 }
 
 function updateActiveBadge() {
-  const filterIds = ["fi-gender", "fi-building", "fi-type", "fi-occ", "fi-roommate"];
+  const filterIds = ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-laundry", "fi-roommate"];
   const searchValue = ($("fi-search")?.value || "").trim();
   const activeCount = filterIds.filter((id) => $(id)?.value).length + (searchValue ? 1 : 0);
   const badge = $("active-badge");
@@ -690,7 +711,7 @@ function updateActiveBadge() {
 }
 
 export function clearFilters() {
-  ["fi-gender", "fi-building", "fi-type", "fi-occ", "fi-roommate"].forEach((id) => {
+  ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-laundry", "fi-roommate"].forEach((id) => {
     const el = $(id);
     if (!el) return;
     el.value = "";
@@ -713,9 +734,10 @@ export function renderTable() {
 
   const searchValue = normalizeValue($("fi-search")?.value || "");
   const filterGender = normalizeValue($("fi-gender")?.value || "");
+  const filterCampusGroup = normalizeValue($("fi-campus-group")?.value || "");
   const filterBuilding = normalizeValue($("fi-building")?.value || "");
-  const filterType = normalizeValue($("fi-type")?.value || "");      // e.g. "traditional"
-  const filterOcc = normalizeValue($("fi-occ")?.value || "");        // e.g. "single"
+  const filterLayout = normalizeValue($("fi-layout")?.value || "");
+  const filterLaundry = $("fi-laundry")?.value || "";
   const filterRoommate = $("fi-roommate")?.value || "";
   const filterSort = $("fi-sort")?.value || "newest";
 
@@ -723,12 +745,10 @@ export function renderTable() {
   let list = state.allListings.filter((l) => l.id !== myId);
 
   if (filterGender)   list = list.filter((l) => normalizeValue(l.housingGender) === filterGender);
+  if (filterCampusGroup) list = list.filter((l) => normalizeValue(l.currentCampusGroup) === filterCampusGroup);
   if (filterBuilding) list = list.filter((l) => normalizeValue(l.currentBuilding) === filterBuilding);
-
-  // Type and occupancy filter against the stored roomType / occupancy fields
-  // (split from layout at save time — see data.js handleSubmit)
-  if (filterType) list = list.filter((l) => normalizeValue(l.roomType) === filterType);
-  if (filterOcc)  list = list.filter((l) => normalizeValue(l.occupancy) === filterOcc);
+  if (filterLayout) list = list.filter((l) => normalizeValue(l.layout) === filterLayout);
+  if (filterLaundry !== "") list = list.filter((l) => String(Boolean(l.laundryInBuilding)) === filterLaundry);
 
   if (filterRoommate !== "") list = list.filter((l) => String(l.bringingRoommate) === filterRoommate);
 
@@ -762,7 +782,7 @@ export function renderTable() {
   const totalListings = state.allListings.filter((l) => l.id !== myId).length;
   const resultCount = $("result-count");
   if (resultCount) {
-    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOcc || filterRoommate;
+    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterLaundry || filterRoommate;
     resultCount.textContent = anyFilter
       ? `Showing ${list.length} of ${totalListings} listings`
       : `${totalListings} listing${totalListings !== 1 ? "s" : ""}`;
@@ -771,7 +791,7 @@ export function renderTable() {
   updateActiveBadge();
 
   if (!list.length) {
-    const anyFilter = searchValue || filterGender || filterBuilding || filterType || filterOcc || filterRoommate;
+    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterLaundry || filterRoommate;
     tbody.innerHTML = `<tr><td colspan="6" class="td-empty">
       <div class="td-empty-icon">🏠</div>
       <p>${anyFilter
@@ -894,6 +914,7 @@ export function fillForm(listing, contact) {
   $("ct-details").textContent = (listing.otherDetails || "").length;
 
   document.querySelectorAll("[name='wg']").forEach((cb) => { cb.checked = (listing.wantedGenders || []).includes(cb.value); });
+  syncWantedGenderOptions();
   const wantedCampusGroups = listing.wantedCampusGroups || [];
   const campusGroupChecks = [...document.querySelectorAll("[name='wcg']")];
   campusGroupChecks.forEach((cb) => {
@@ -934,6 +955,7 @@ export function resetForm() {
   updateAddressOptions(); // clear progressive address/layout options when form resets
   syncLargeResidenceLookingForFilters([], [], []);
   syncRoommateTotalPeopleField();
+  syncWantedGenderOptions();
 }
 
 export function syncRoommateTotalPeopleField() {

@@ -67,7 +67,7 @@ export function bindEvents() {
     renderTable();
   });
 
-  ["fi-gender", "fi-building", "fi-type", "fi-occ", "fi-roommate", "fi-sort"].forEach((id) => {
+  ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-laundry", "fi-roommate", "fi-sort"].forEach((id) => {
     $(id)?.addEventListener("change", () => {
       updateFilterActive(id);
       renderTable();

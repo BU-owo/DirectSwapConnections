@@ -99,15 +99,14 @@
           <option value="">All genders</option>
           <option>Male</option><option>Female</option><option>Gender Neutral</option>
         </select>
+        <select id="fi-campus-group"><option value="">All campus groups</option></select>
         <select id="fi-building"><option value="">All buildings</option></select>
-      <select id="fi-type">
-        <option value="">All room types</option>
-        <!-- Populated by ui.js populateOptions() from ROOM_TYPES -->
-      </select>
-      <select id="fi-occ">
-        <option value="">All occupancies</option>
-        <!-- Populated by ui.js populateOptions() from OCCUPANCIES -->
-      </select>
+        <select id="fi-layout"><option value="">All layouts</option></select>
+        <select id="fi-laundry">
+          <option value="">Laundry: any</option>
+          <option value="true">Laundry: yes</option>
+          <option value="false">Laundry: no</option>
+        </select>
         <select id="fi-roommate">
           <option value="">Roommate: any</option>
           <option value="true">Bringing +1</option>
@@ -128,8 +127,8 @@
       <table>
   <thead>
     <tr>
-      <th>Building</th>
-      <th>Gender / Type / Occ</th>
+      <th>Area</th>
+      <th>Listing Info</th>
       <th>Room Pitch</th>
       <th>Looking For</th>
       <th>Contact</th>

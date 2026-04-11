@@ -133,6 +133,22 @@ export async function handleSubmit(event) {
   }
   if (!pitch) return setErr("form-err", "Describe your room's best features.");
   if (!wantedGenders.length) return setErr("form-err", "Select at least one gender housing preference.");
+
+  const allowedWantedByHousing = {
+    Male: new Set(["Male", "Gender Neutral"]),
+    Female: new Set(["Female", "Gender Neutral"]),
+    "Gender Neutral": new Set(["Male", "Female", "Gender Neutral"]),
+  };
+  const allowedWanted = allowedWantedByHousing[housingGender] || new Set(["Male", "Female", "Gender Neutral"]);
+  if (wantedGenders.some((gender) => !allowedWanted.has(gender))) {
+    return setErr(
+      "form-err",
+      housingGender === "Gender Neutral"
+        ? "Invalid gender preference selection."
+        : `If your housing assignment is ${housingGender}, you can only choose ${housingGender} or Gender Neutral.`
+    );
+  }
+
   if (!wantedCampusGroups.length) return setErr("form-err", "Select at least one campus group you'd consider.");
   if (wantedCampusGroups.includes(LARGE_STYLE_RESIDENCES_GROUP) && !wantedLargeResidenceAreas.length) {
     return setErr("form-err", "Select at least one Large Residence area you'd consider.");

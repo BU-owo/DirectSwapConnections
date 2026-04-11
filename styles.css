@@ -450,6 +450,7 @@ textarea { resize: vertical; min-height: 80px; }
 .checks-toolbar { display: flex; gap: 8px; margin-bottom: 6px; }
 .check-opt { display: flex; align-items: center; gap: 7px; font-size: .9rem; font-weight: 400; text-transform: none; letter-spacing: 0; cursor: pointer; color: var(--text); }
 .check-opt input[type="checkbox"] { width: auto; accent-color: var(--red); flex-shrink: 0; }
+.check-opt.is-disabled { opacity: .5; cursor: not-allowed; }
 
 .campus-group-blocks {
   display: grid;
@@ -817,14 +818,14 @@ tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
 tbody tr:hover { background: #fafaf8; }
 
 .td-building {
-  width: 140px;
-  min-width: 140px;
+  width: 120px;
+  min-width: 120px;
   padding: 12px 10px;
 }
 
 .td-info {
-  width: 160px;
-  min-width: 160px;
+  width: 135px;
+  min-width: 135px;
   padding: 10px;
 }
 
@@ -836,7 +837,7 @@ tbody tr:hover { background: #fafaf8; }
 
 .td-pitch {
   flex: 1;
-  min-width: 220px;
+  min-width: 180px;
   padding: 10px;
 }
 
@@ -856,15 +857,16 @@ tbody tr:hover { background: #fafaf8; }
   padding: 3px 8px;
   border-radius: 4px;
   cursor: pointer;
-  margin-left: 6px;
+  margin-top: 6px;
+  margin-left: 0;
   transition: all .15s;
 }
 
 .expand-btn:hover { background: var(--red-lt); border-color: var(--red); }
 
 .td-looking {
-  width: 140px;
-  min-width: 140px;
+  width: 120px;
+  min-width: 120px;
   padding: 10px;
   font-size: .8rem;
   color: var(--sub);
@@ -874,8 +876,8 @@ tbody tr:hover { background: #fafaf8; }
 .td-looking strong { color: var(--text); font-size: .75rem; }
 
 .td-contact {
-  width: 120px;
-  min-width: 120px;
+  width: 100px;
+  min-width: 100px;
   padding: 10px;
   font-size: .82rem;
 }
@@ -886,7 +888,15 @@ tbody tr:hover { background: #fafaf8; }
   padding: 10px;
   font-size: .8rem;
   color: var(--sub);
-  text-align: center;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.td-posted .expand-btn {
+  margin-top: 0;
+  align-self: flex-start;
 }
 
 /* ── Expand modal ──────────────────────────────────────────── */
@@ -906,6 +916,8 @@ tbody tr:hover { background: #fafaf8; }
   border-radius: 12px;
   padding: 2rem;
   max-width: 500px;
+  max-height: min(86vh, 740px);
+  overflow-y: auto;
   width: 100%;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
@@ -949,6 +961,29 @@ tbody tr:hover { background: #fafaf8; }
 
 .modal-details strong { color: var(--text); }
 
+.modal-section-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.05rem;
+  color: var(--text);
+  margin-bottom: .5rem;
+}
+
+.modal-list-block {
+  margin-top: .45rem;
+  color: var(--sub);
+  font-size: .85rem;
+}
+
+.modal-list {
+  margin: .3rem 0 0 1.1rem;
+  display: grid;
+  gap: .2rem;
+}
+
+.modal-list li {
+  line-height: 1.5;
+}
+
 /* ── Mobile responsive ────────────────────────────────────────*/
 @media (max-width: 1024px) {
   .table-wrap { overflow-x: auto; }
@@ -981,6 +1016,9 @@ tbody tr:hover { background: #fafaf8; }
     border: 1px solid var(--border);
     border-radius: 10px;
     margin-bottom: 12px;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
     background: white;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -1066,4 +1104,103 @@ tbody tr:hover { background: #fafaf8; }
   main { padding: 0 .75rem 2rem; }
 
   .my-preview-body { grid-template-columns: 1fr; }
+}
+
+/* ── Listings Card Grid (4-up desktop) ───────────────────── */
+.table-wrap {
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.table-wrap table {
+  display: block;
+  width: 100%;
+  border-collapse: separate;
+}
+
+.table-wrap thead {
+  display: none;
+}
+
+.table-wrap tbody {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.table-wrap tbody tr {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin: 0;
+}
+
+.table-wrap tbody td {
+  display: block;
+  width: 100%;
+  max-width: none;
+  padding: 10px 12px;
+  border: none;
+  border-top: 1px dashed rgba(0,0,0,.08);
+  text-align: left;
+}
+
+.table-wrap tbody td:first-child {
+  border-top: none;
+}
+
+.table-wrap tbody td::before {
+  display: block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--sub);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 4px;
+}
+
+.table-wrap .td-building::before { content: "Campus / Name"; }
+.table-wrap .td-info::before { content: "Info"; }
+.table-wrap .td-pitch::before { content: "Room Pitch"; }
+.table-wrap .td-looking::before { content: "Looking For"; }
+.table-wrap .td-contact::before { content: "Contact"; }
+.table-wrap .td-posted::before { content: "Posted"; }
+
+.table-wrap .td-looking {
+  display: none;
+}
+
+.table-wrap .td-loading,
+.table-wrap .td-empty {
+  text-align: center;
+  border-top: none;
+}
+
+.table-wrap .td-loading::before,
+.table-wrap .td-empty::before {
+  content: "";
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .table-wrap tbody {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .table-wrap tbody {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .table-wrap tbody {
+    grid-template-columns: 1fr;
+  }
 }
