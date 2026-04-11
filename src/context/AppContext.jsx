@@ -43,9 +43,9 @@ export function AppProvider({ children }) {
     return () => unsub();
   }, []);
 
-  // Stream listings so browse updates immediately when documents change.
+  // Stream listings only for signed-in users so payloads are not requested anonymously.
   useEffect(() => {
-    if (!db) {
+    if (!db || !user) {
       setListings([]);
       return () => {};
     }
@@ -63,7 +63,7 @@ export function AppProvider({ children }) {
     );
 
     return () => unsub();
-  }, []);
+  }, [user]);
 
   // Load contact details only for signed-in sessions.
   useEffect(() => {

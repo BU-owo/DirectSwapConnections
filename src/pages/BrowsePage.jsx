@@ -196,6 +196,29 @@ export default function BrowsePage() {
 
   const expandedListing = filteredListings.find((item) => item.id === expandedId) || listings.find((item) => item.id === expandedId) || null;
 
+  if (!user) {
+    return (
+      <div id="panel-browse" className="panel">
+        <div className="notice-bar">
+          <strong>Sign in with your BU Google account</strong> to view listings.
+          <button
+            className="btn-notice"
+            onClick={() => navigate("/submit")}
+          >
+            login with BU email to see listings
+          </button>
+        </div>
+
+        <div className="panel-top">
+          <div>
+            <h2 className="panel-title">Active Swap Listings</h2>
+            <p className="result-count">Login with BU email to unlock cards and search filters.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="panel-browse" className="panel">
       {user && myListing ? (
@@ -250,18 +273,6 @@ export default function BrowsePage() {
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {!user ? (
-        <div className="notice-bar">
-          <strong>Sign in with your BU Google account</strong> to see contact info.
-          <button
-            className="btn-notice"
-            onClick={() => navigate("/submit")}
-          >
-            Sign In
-          </button>
         </div>
       ) : null}
 
@@ -440,16 +451,12 @@ export default function BrowsePage() {
                       <div className="td-sub">Shown in expanded view</div>
                     </td>
                     <td>
-                      {!user ? (
-                        <button className="contact-locked" onClick={() => navigate("/submit")}>Sign in</button>
-                      ) : (
-                        <>
-                          {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`}>{listing.email}</a> : <span>-</span>}
-                          {contact.redditUsername ? <div className="td-sub">{contact.redditUsername}</div> : null}
-                          {contact.phone ? <div className="td-sub">{contact.phone}</div> : null}
-                          {contact.otherContact ? <div className="td-sub">{contact.otherContact}</div> : null}
-                        </>
-                      )}
+                      <>
+                        {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`}>{listing.email}</a> : <span>-</span>}
+                        {contact.redditUsername ? <div className="td-sub">{contact.redditUsername}</div> : null}
+                        {contact.phone ? <div className="td-sub">{contact.phone}</div> : null}
+                        {contact.otherContact ? <div className="td-sub">{contact.otherContact}</div> : null}
+                      </>
                     </td>
                     <td>
                       <div>{date}</div>
