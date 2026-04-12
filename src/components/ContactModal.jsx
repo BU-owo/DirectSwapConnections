@@ -15,7 +15,7 @@ function BulletList({ values }) {
   );
 }
 
-export default function ExpandModal({ listing, onClose }) {
+export default function ContactModal({ listing, contact, onClose }) {
   const showLargeDetails = useMemo(
     () => (listing.wantedCampusGroups || []).includes("Large Traditional-Style Residences"),
     [listing]
@@ -25,17 +25,19 @@ export default function ExpandModal({ listing, onClose }) {
 
   return (
     <div className="expand-modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="expand-modal" role="dialog" aria-modal="true" aria-label="Listing details">
+      <div className="expand-modal" role="dialog" aria-modal="true" aria-label="Contact information">
         <button className="modal-close" onClick={onClose}>x</button>
-        <h3>{listing.layout || "-"} - {listing.currentCampusGroup || "-"}</h3>
-        <div className="modal-details" style={{ marginBottom: 12 }}>
-          <strong>Housing gender:</strong> {listing.housingGender || "-"}<br />
-          <strong>Bringing roommate:</strong> {listing.bringingRoommate ? `Yes${listing.totalPeople ? ` (${listing.totalPeople} total)` : ""}` : "No"}
+        <h3>Contact Information</h3>
+
+        <div className="modal-section" style={{ marginBottom: 20, padding: 16, backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: 8 }}>
+          <h4 style={{ color: '#856404', margin: '0 0 12px 0', fontSize: '1.1rem' }}>⚠️ Important: Please read before contacting</h4>
+          <p style={{ color: '#856404', margin: 0, fontSize: '0.95rem', lineHeight: 1.4 }}>
+            <strong>Don't contact this person unless you have what they're looking for.</strong> They are specifically seeking the housing criteria listed below. Contacting them about other options may waste both your time and theirs.
+          </p>
         </div>
-        <p className="modal-pitch">{listing.pitch || "-"}</p>
-        {listing.otherDetails ? <p className="modal-details"><strong>Other details:</strong> {listing.otherDetails}</p> : null}
-        <div className="modal-section" style={{ marginTop: 12 }}>
-          <h4 className="modal-section-title">What I'm Looking For</h4>
+
+        <div className="modal-section">
+          <h4 className="modal-section-title">What They're Looking For</h4>
           <div className="modal-filters">
             <div className="modal-filter-group">
               <strong>Gender:</strong> {joinOrDash(listing.wantedGenders) || "Any"}
@@ -75,6 +77,27 @@ export default function ExpandModal({ listing, onClose }) {
               <div className="modal-filter-group">
                 <strong>Additional details:</strong> {listing.wantedOtherDetails}
               </div>
+            )}
+          </div>
+        </div>
+
+        <div className="modal-section" style={{ marginTop: 20, padding: 16, backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: 8 }}>
+          <h4 className="modal-section-title">Contact Details</h4>
+          <div className="modal-details">
+            {listing.email && (
+              <p><strong>Email:</strong> <a href={`mailto:${listing.email}`} className="contact-link">{listing.email}</a></p>
+            )}
+            {contact?.redditUsername && (
+              <p><strong>Reddit:</strong> <span style={{color: 'var(--sub)'}}>{contact.redditUsername}</span></p>
+            )}
+            {contact?.phone && (
+              <p><strong>Phone:</strong> <span style={{color: 'var(--sub)'}}>{contact.phone}</span></p>
+            )}
+            {contact?.otherContact && (
+              <p><strong>Other:</strong> <span style={{color: 'var(--sub)'}}>{contact.otherContact}</span></p>
+            )}
+            {!listing.email && !contact?.redditUsername && !contact?.phone && !contact?.otherContact && (
+              <p style={{color: '#aaa'}}>No contact information provided</p>
             )}
           </div>
         </div>
