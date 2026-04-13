@@ -10,3 +10,5 @@ Created by BUowo and Jayden Chon
 - Browse other listings and filter by gender, building, occupancy, or roommate status
 - **Contact info is locked** until you submit your own listing
 - Update or remove your listing any time
+
+Not Affliated with Boston University or Boston University Housing.
