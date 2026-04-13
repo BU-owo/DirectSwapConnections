@@ -134,6 +134,7 @@ function appendChecks(wrapperId, name, items) {
 // ─── Panel switching ──────────────────────────────────────────────────────────
 
 export function showPanel(name) {
+  $("panel-home")?.classList.toggle("hidden", name !== "home");
   $("panel-browse")?.classList.toggle("hidden", name !== "browse");
   $("panel-submit")?.classList.toggle("hidden", name !== "submit");
   document.querySelectorAll(".nav-tab").forEach((tab) => {

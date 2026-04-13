@@ -7,6 +7,7 @@ import {
   renderMyPreview,
   resetForm,
   setUiCallbacks,
+  showPanel,
 } from "./js/ui.js";
 import { bindEvents } from "./js/events.js";
 import { doSignIn } from "./js/auth.js";
@@ -14,6 +15,7 @@ import { startListingsListener, loadUserListing, refreshContacts } from "./js/da
 
 document.addEventListener("DOMContentLoaded", () => {
   populateOptions();
+  showPanel("home");
   setUiCallbacks({
     onRequireSignIn: doSignIn,
     onFiltersChanged: renderTable,

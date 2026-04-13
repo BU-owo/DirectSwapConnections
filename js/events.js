@@ -74,6 +74,15 @@ export function bindEvents() {
     });
   });
 
+  // Collapsible filters toggle
+  $("btn-toggle-filters")?.addEventListener("click", () => {
+    const wrap = $("filter-chips-wrap");
+    const label = $("filter-toggle-label");
+    if (!wrap) return;
+    const isHidden = wrap.classList.toggle("hidden");
+    if (label) label.textContent = isHidden ? "Show" : "Hide";
+  });
+
   $("btn-clear")?.addEventListener("click", clearFilters);
   $("the-form")?.addEventListener("submit", handleSubmit);
   $("btn-delete")?.addEventListener("click", handleDelete);

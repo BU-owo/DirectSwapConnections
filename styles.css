@@ -932,3 +932,242 @@ tbody tr:hover { background: #fafaf8; }
 
   .my-preview-body { grid-template-columns: 1fr; }
 }
+/* ══ HOME PAGE ══════════════════════════════════════════════ */
+.panel-home {
+  padding: 0;
+}
+
+.home-hero {
+  background: var(--red);
+  padding: 4rem 1.5rem 5rem;
+  text-align: center;
+  border-bottom: 3px solid var(--gold);
+}
+
+.home-hero h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: .75rem;
+}
+
+.home-hero h1 em { color: var(--gold); font-style: italic; }
+
+.home-hero > p {
+  color: rgba(255,255,255,.82);
+  font-size: 1rem;
+  max-width: 500px;
+  margin: 0 auto 2rem;
+  line-height: 1.65;
+}
+
+.home-ctas {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.home-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.home-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.home-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+}
+
+.home-card-wide {
+  grid-column: 1 / -1;
+}
+
+.home-card-icon {
+  font-size: 1.8rem;
+}
+
+.home-card h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.home-card p {
+  font-size: .92rem;
+  color: var(--sub);
+  line-height: 1.7;
+}
+
+/* Dates */
+.dates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-radius: var(--r);
+  border-left: 3px solid var(--red);
+}
+
+.date-label {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--sub);
+}
+
+.date-val {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dates-note {
+  font-size: .82rem;
+  color: #7a5c00;
+  background: var(--gold-lt);
+  border: 1px solid rgba(200,169,81,.35);
+  border-radius: var(--r);
+  padding: 10px 14px;
+  line-height: 1.55;
+}
+
+/* How it works */
+.how-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.how-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: .9rem;
+  color: var(--sub);
+  line-height: 1.55;
+}
+
+.how-step strong { color: var(--text); }
+
+.how-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Disclaimer */
+.home-disclaimer {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--gold-lt);
+  border: 1px solid rgba(200,169,81,.45);
+  border-radius: var(--r-lg);
+  padding: 1.25rem 1.5rem;
+  font-size: .88rem;
+  line-height: 1.65;
+  color: #5a3e00;
+}
+
+.disclaimer-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+
+.disclaimer-body a {
+  color: var(--red);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.disclaimer-body a:hover { text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .home-info-grid { grid-template-columns: 1fr; }
+  .home-card-wide { grid-column: 1; }
+  .how-steps { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .home-hero { padding: 2.5rem 1rem 3.5rem; }
+  .home-ctas { flex-direction: column; align-items: stretch; max-width: 320px; margin-left: auto; margin-right: auto; }
+  .hero-cta-white, .hero-cta-ghost { width: 100%; }
+}
+
+/* ══ SUBMIT PANEL — centered form ══════════════════════════ */
+#panel-submit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#panel-submit .gate-wrap,
+#panel-submit #submit-form {
+  width: 100%;
+  max-width: 860px;
+}
+
+#panel-submit #success-msg {
+  max-width: 860px;
+  width: 100%;
+}
+
+/* ══ COLLAPSIBLE FILTERS ═══════════════════════════════════ */
+.filter-toggle-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filter-chips {
+  padding-top: 4px;
+}
+
+/* ══ TABLE — fix column sizing ═════════════════════════════ */
+table {
+  table-layout: fixed;
+}
+
+.td-building { width: 150px; }
+.td-info     { width: 170px; }
+.td-pitch    { width: auto; }   /* takes remaining space */
+.td-looking  { width: 145px; }
+.td-contact  { width: 130px; }
+.td-posted   { width: 72px; }
+
+thead th, tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* override the old free-grow td rule so columns respect their widths */
+tbody td { max-width: none; }
+
