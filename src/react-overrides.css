@@ -81,6 +81,12 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+  cursor: pointer;
+}
+
+.table-wrap tbody tr:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
 }
 
 .table-wrap tbody td,

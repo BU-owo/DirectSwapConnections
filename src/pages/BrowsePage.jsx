@@ -197,6 +197,10 @@ export default function BrowsePage() {
 
   const expandedListing = filteredListings.find((item) => item.id === expandedId) || listings.find((item) => item.id === expandedId) || null;
 
+  function openExpandedListing(listingId) {
+    setExpandedId(listingId);
+  }
+
   if (!user) {
     return (
       <div id="panel-browse" className="panel">
@@ -438,7 +442,19 @@ export default function BrowsePage() {
                 const movingCount = listing.bringingRoommate ? Number(listing.totalPeople || 2) : 1;
 
                 return (
-                  <tr key={listing.id}>
+                  <tr
+                    key={listing.id}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Expand listing for ${cardPrimaryLocation}`}
+                    onClick={() => openExpandedListing(listing.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openExpandedListing(listing.id);
+                      }
+                    }}
+                  >
                     <td className="td-listing">
                       <div style={{ marginBottom: 6 }}>
                         <span className="badge badge-red">{cardPrimaryLocation}</span>
@@ -456,12 +472,12 @@ export default function BrowsePage() {
                       {listing.otherDetails ? <div className="td-sub">{listing.otherDetails}</div> : null}
                     </td>
                     <td className="hidden-mobile">
-                      <div className="td-sub">Shown in expanded view</div>
+                      <div className="td-sub">Click to show details</div>
                     </td>
                     <td>
                       {canViewContacts ? (
                         <>
-                          {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`}>{listing.email}</a> : <span>-</span>}
+                          {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`} onClick={(event) => event.stopPropagation()}>{listing.email}</a> : <span>-</span>}
                           {contact.redditUsername ? <div className="td-sub">{contact.redditUsername}</div> : null}
                           {contact.phone ? <div className="td-sub">{contact.phone}</div> : null}
                           {contact.otherContact ? <div className="td-sub">{contact.otherContact}</div> : null}
@@ -470,15 +486,17 @@ export default function BrowsePage() {
                         <button
                           type="button"
                           className="btn-ghost-xs contact-locked-cta"
-                          onClick={() => navigate("/submit")}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate("/submit");
+                          }}
                         >
-                          click for contact info
+                          Submit listing to view
                         </button>
                       )}
                     </td>
                     <td>
                       <div>{date}</div>
-                      <button className="expand-btn" onClick={() => setExpandedId(listing.id)}>Read more</button>
                     </td>
                   </tr>
                 );
