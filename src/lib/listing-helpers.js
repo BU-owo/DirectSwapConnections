@@ -45,7 +45,6 @@ export function buildListingPayload(formValues, selectedBuilding) {
     roomType,
     occupancy,
     bringingRoommate: formValues.bringingRoommate === "true",
-    laundryInBuilding: formValues.laundryInBuilding === "true",
     totalPeople: formValues.bringingRoommate === "true" ? Number(formValues.totalPeople) : null,
     pitch: censorProfanity(formValues.pitch.trim()),
     otherDetails: censorProfanity(formValues.otherDetails.trim()),
@@ -54,6 +53,7 @@ export function buildListingPayload(formValues, selectedBuilding) {
     wantedLargeResidenceAreas: formValues.wantedLargeResidenceAreas,
     wantedLargeResidenceBuildings: formValues.wantedLargeResidenceBuildings,
     wantedLayoutStyles: formValues.wantedLayoutStyles,
+    wantedOtherDetails: censorProfanity(formValues.wantedOtherDetails?.trim() || ""),
   };
 }
 

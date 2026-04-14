@@ -12,6 +12,8 @@ import {
   getLayoutsForAddress,
   getLayoutsForGroups,
   getLayoutsForLargeResidenceSelections,
+  getBuildingsWithApartmentLayouts,
+  getCampusGroupsWithOccupancy,
 } from "../../js/housing-data.js";
 import { useAppContext } from "../context/AppContext";
 import {
@@ -66,7 +68,6 @@ const DEFAULT_FORM = {
   currentAddress: "",
   layout: "",
   bringingRoommate: "",
-  laundryInBuilding: "",
   totalPeople: "",
   pitch: "",
   otherDetails: "",
@@ -75,6 +76,7 @@ const DEFAULT_FORM = {
   wantedLargeResidenceAreas: [],
   wantedLargeResidenceBuildings: [],
   wantedLayoutStyles: [],
+  wantedOtherDetails: "",
   redditUsername: "",
   phone: "",
   otherContact: "",
@@ -166,7 +168,6 @@ export default function SubmitPage() {
       currentAddress: myListing.currentAddress || "",
       layout: myListing.layout || "",
       bringingRoommate: String(Boolean(myListing.bringingRoommate)),
-      laundryInBuilding: String(Boolean(myListing.laundryInBuilding)),
       totalPeople: myListing.totalPeople ? String(myListing.totalPeople) : "",
       pitch: myListing.pitch || "",
       otherDetails: myListing.otherDetails || "",
@@ -175,6 +176,7 @@ export default function SubmitPage() {
       wantedLargeResidenceAreas: myListing.wantedLargeResidenceAreas || [],
       wantedLargeResidenceBuildings: myListing.wantedLargeResidenceBuildings || [],
       wantedLayoutStyles: myListing.wantedLayoutStyles || [],
+      wantedOtherDetails: myListing.wantedOtherDetails || "",
       redditUsername: contact.redditUsername || "",
       phone: contact.phone || "",
       otherContact: contact.otherContact || "",
@@ -309,7 +311,6 @@ export default function SubmitPage() {
     if (!form.currentAddress) return "Select your current address.";
     if (!form.layout) return "Select your room layout.";
     if (!form.bringingRoommate) return "Indicate whether you are bringing a roommate.";
-    if (!form.laundryInBuilding) return "Select whether laundry is in the building.";
     if (form.bringingRoommate === "true") {
       if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 10) {
         return "If bringing a roommate, total people must be a whole number from 2 to 10.";
@@ -558,18 +559,6 @@ export default function SubmitPage() {
                 </div>
               </div>
 
-              <div className="ffield">
-                <label>Laundry in Building? <span className="req">*</span></label>
-                <div className="radio-row">
-                  <label className="radio-opt">
-                    <input type="radio" name="laundryInBuilding" checked={form.laundryInBuilding === "true"} onChange={() => setForm((prev) => ({ ...prev, laundryInBuilding: "true" }))} /> Yes
-                  </label>
-                  <label className="radio-opt">
-                    <input type="radio" name="laundryInBuilding" checked={form.laundryInBuilding === "false"} onChange={() => setForm((prev) => ({ ...prev, laundryInBuilding: "false" }))} /> No
-                  </label>
-                </div>
-              </div>
-
               {form.bringingRoommate === "true" ? (
                 <div className="ffield">
                   <label>How Many Total People? <span className="req">*</span></label>
@@ -611,6 +600,88 @@ export default function SubmitPage() {
 
           <section className="fsec">
             <h3 className="fsec-title">What You're Looking For</h3>
+            <div className="quick-filters-section">
+              <h3 className="section-title">Quick Filters</h3>
+              <div className="quick-filters">
+                <button
+                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Apartment") || layout.includes("Studio")) ? "active" : ""}`}
+                  onClick={() => {
+                    const hasApartments = form.wantedLayoutStyles?.some(layout => layout.includes("Apartment") || layout.includes("Studio"));
+                    const apartmentLayouts = ["Apartment Single", "Apartment Double", "Apartment Triple", "Studio Single", "Studio Double", "Studio Triple"];
+                    const apartmentGroups = ["South Campus Apartments", "East Campus Apartments", "Central Campus Apartments", "Student Village"];
+                    setForm((prev) => ({
+                      ...prev,
+                      wantedLayoutStyles: hasApartments
+                        ? prev.wantedLayoutStyles.filter(layout => !apartmentLayouts.includes(layout))
+                        : [...(prev.wantedLayoutStyles || []), ...apartmentLayouts],
+                      wantedCampusGroups: hasApartments
+                        ? prev.wantedCampusGroups.filter(group => !apartmentGroups.includes(group))
+                        : [...new Set([...(prev.wantedCampusGroups || []), ...apartmentGroups])],
+                    }));
+                  }}
+                >
+                  Any Apartment
+                </button>
+                <button
+                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Single")) ? "active" : ""}`}
+                  onClick={() => {
+                    const hasSingles = form.wantedLayoutStyles?.some(layout => layout.includes("Single"));
+                    const singleLayouts = ["Apartment Single", "Studio Single", "Traditional Single", "Suite Single", "Semi-Suite Single"];
+                    const singleGroups = getCampusGroupsWithOccupancy("Single");
+                    setForm((prev) => ({
+                      ...prev,
+                      wantedLayoutStyles: hasSingles
+                        ? prev.wantedLayoutStyles.filter(layout => !singleLayouts.includes(layout))
+                        : [...(prev.wantedLayoutStyles || []), ...singleLayouts],
+                      wantedCampusGroups: hasSingles
+                        ? prev.wantedCampusGroups.filter(group => !singleGroups.includes(group))
+                        : [...new Set([...(prev.wantedCampusGroups || []), ...singleGroups])],
+                    }));
+                  }}
+                >
+                  Any Single
+                </button>
+                <button
+                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Double")) ? "active" : ""}`}
+                  onClick={() => {
+                    const hasDoubles = form.wantedLayoutStyles?.some(layout => layout.includes("Double"));
+                    const doubleLayouts = ["Apartment Double", "Studio Double", "Traditional Double", "Suite Double", "Semi-Suite Double"];
+                    const doubleGroups = getCampusGroupsWithOccupancy("Double");
+                    setForm((prev) => ({
+                      ...prev,
+                      wantedLayoutStyles: hasDoubles
+                        ? prev.wantedLayoutStyles.filter(layout => !doubleLayouts.includes(layout))
+                        : [...(prev.wantedLayoutStyles || []), ...doubleLayouts],
+                      wantedCampusGroups: hasDoubles
+                        ? prev.wantedCampusGroups.filter(group => !doubleGroups.includes(group))
+                        : [...new Set([...(prev.wantedCampusGroups || []), ...doubleGroups])],
+                    }));
+                  }}
+                >
+                  Any Double
+                </button>
+                <button
+                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Triple")) ? "active" : ""}`}
+                  onClick={() => {
+                    const hasTriples = form.wantedLayoutStyles?.some(layout => layout.includes("Triple"));
+                    const tripleLayouts = ["Apartment Triple", "Studio Triple", "Traditional Triple", "Suite Triple", "Semi-Suite Triple"];
+                    const tripleGroups = getCampusGroupsWithOccupancy("Triple");
+                    setForm((prev) => ({
+                      ...prev,
+                      wantedLayoutStyles: hasTriples
+                        ? prev.wantedLayoutStyles.filter(layout => !tripleLayouts.includes(layout))
+                        : [...(prev.wantedLayoutStyles || []), ...tripleLayouts],
+                      wantedCampusGroups: hasTriples
+                        ? prev.wantedCampusGroups.filter(group => !tripleGroups.includes(group))
+                        : [...new Set([...(prev.wantedCampusGroups || []), ...tripleGroups])],
+                    }));
+                  }}
+                >
+                  Any Triple
+                </button>
+              </div>
+            </div>
+
             <div className="fgrid">
               <div className="ffield">
                 <label>Gender Housing <span className="req">*</span></label>
@@ -760,6 +831,16 @@ export default function SubmitPage() {
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="ffield full">
+                <label>Additional Details</label>
+                <textarea
+                  value={form.wantedOtherDetails || ""}
+                  onChange={(event) => setForm((prev) => ({ ...prev, wantedOtherDetails: event.target.value }))}
+                  placeholder="Any other specific requirements or preferences..."
+                  rows={3}
+                />
               </div>
             </div>
           </section>

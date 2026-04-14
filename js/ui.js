@@ -696,7 +696,7 @@ export function updateFilterActive(id) {
 }
 
 function updateActiveBadge() {
-  const filterIds = ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-laundry", "fi-roommate"];
+  const filterIds = ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-roommate"];
   const searchValue = ($("fi-search")?.value || "").trim();
   const activeCount = filterIds.filter((id) => $(id)?.value).length + (searchValue ? 1 : 0);
   const badge = $("active-badge");
@@ -711,7 +711,7 @@ function updateActiveBadge() {
 }
 
 export function clearFilters() {
-  ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-laundry", "fi-roommate"].forEach((id) => {
+  ["fi-gender", "fi-campus-group", "fi-building", "fi-layout", "fi-roommate"].forEach((id) => {
     const el = $(id);
     if (!el) return;
     el.value = "";
@@ -737,7 +737,7 @@ export function renderTable() {
   const filterCampusGroup = normalizeValue($("fi-campus-group")?.value || "");
   const filterBuilding = normalizeValue($("fi-building")?.value || "");
   const filterLayout = normalizeValue($("fi-layout")?.value || "");
-  const filterLaundry = $("fi-laundry")?.value || "";
+
   const filterRoommate = $("fi-roommate")?.value || "";
   const filterSort = $("fi-sort")?.value || "newest";
 
@@ -748,7 +748,6 @@ export function renderTable() {
   if (filterCampusGroup) list = list.filter((l) => normalizeValue(l.currentCampusGroup) === filterCampusGroup);
   if (filterBuilding) list = list.filter((l) => normalizeValue(l.currentBuilding) === filterBuilding);
   if (filterLayout) list = list.filter((l) => normalizeValue(l.layout) === filterLayout);
-  if (filterLaundry !== "") list = list.filter((l) => String(Boolean(l.laundryInBuilding)) === filterLaundry);
 
   if (filterRoommate !== "") list = list.filter((l) => String(l.bringingRoommate) === filterRoommate);
 
@@ -757,7 +756,6 @@ export function renderTable() {
     list = list.filter((l) => {
       const blob = [
         l.currentBuilding, l.layout, l.roomType, l.occupancy,
-        l.laundryInBuilding ? "laundry yes" : "laundry no",
         l.housingGender, l.pitch, l.otherDetails,
         l.currentCampusGroup, l.currentAddress, l.currentLargeResidenceArea,
         ...(l.wantedCampusGroups || []),
@@ -782,7 +780,7 @@ export function renderTable() {
   const totalListings = state.allListings.filter((l) => l.id !== myId).length;
   const resultCount = $("result-count");
   if (resultCount) {
-    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterLaundry || filterRoommate;
+    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterRoommate;
     resultCount.textContent = anyFilter
       ? `Showing ${list.length} of ${totalListings} listings`
       : `${totalListings} listing${totalListings !== 1 ? "s" : ""}`;
@@ -791,7 +789,7 @@ export function renderTable() {
   updateActiveBadge();
 
   if (!list.length) {
-    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterLaundry || filterRoommate;
+    const anyFilter = searchValue || filterGender || filterCampusGroup || filterBuilding || filterLayout || filterRoommate;
     tbody.innerHTML = `<tr><td colspan="6" class="td-empty">
       <div class="td-empty-icon">🏠</div>
       <p>${anyFilter
@@ -846,7 +844,6 @@ export function renderMyPreview() {
         ${listing.currentLargeResidenceArea ? `<span class="badge badge-grey">${esc(listing.currentLargeResidenceArea)}</span>` : ""}
         <span class="badge badge-grey">${esc(listing.layout || "—")}</span>
         <span class="badge badge-blue">${esc(listing.housingGender || "—")}</span>
-        <span class="badge badge-grey">Laundry: ${listing.laundryInBuilding ? "Yes" : "No"}</span>
         ${listing.bringingRoommate
           ? `<span class="badge badge-gold">+Roommate${listing.totalPeople ? ` (${esc(listing.totalPeople)} total)` : ""}</span>`
           : ""}
@@ -900,9 +897,7 @@ export function fillForm(listing, contact) {
   document.querySelectorAll("[name='f-roommate']").forEach((r) => {
     r.checked = r.value === String(listing.bringingRoommate);
   });
-  document.querySelectorAll("[name='f-laundry']").forEach((r) => {
-    r.checked = r.value === String(listing.laundryInBuilding);
-  });
+
   if ($("f-total-people")) {
     $("f-total-people").value = listing.totalPeople ? String(listing.totalPeople) : "";
   }

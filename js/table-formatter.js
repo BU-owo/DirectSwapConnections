@@ -51,7 +51,6 @@ export function buildRow(listing, currentUser, contactsMap) {
   const genderBadge = `<span class="badge badge-gender">${esc(listing.housingGender || "—")}</span>`;
   const typeBadge = `<span class="badge badge-type">${esc(listing.roomType || "—")}</span>`;
   const occBadge = `<span class="badge badge-occ">${esc(listing.occupancy || "—")}</span>`;
-  const laundryBadge = `<span class="badge badge-grey">Laundry: ${listing.laundryInBuilding ? "Yes" : "No"}</span>`;
   const savedTotal = Number(listing.totalPeople);
   const movingCount = listing.bringingRoommate
     ? (Number.isInteger(savedTotal) && savedTotal >= 2 ? savedTotal : 2)
@@ -60,7 +59,7 @@ export function buildRow(listing, currentUser, contactsMap) {
   const largeAreaBadge = listing.currentLargeResidenceArea
     ? `<span class="badge badge-grey">${esc(listing.currentLargeResidenceArea)}</span>`
     : "";
-  const infoBadges = `${genderBadge} ${typeBadge} ${occBadge} ${laundryBadge} ${movingBadge} ${largeAreaBadge}`;
+  const infoBadges = `${genderBadge} ${typeBadge} ${occBadge} ${movingBadge} ${largeAreaBadge}`;
 
   // Looking for compact display
   // Preview truncation for card readability
@@ -115,7 +114,6 @@ export function showExpandModal(listingId, allListings) {
       <h3>${esc(listing.layout || "—")} - ${esc(listing.currentCampusGroup)}</h3>
       <div class="modal-details" style="margin-bottom:12px">
         <strong>Housing gender:</strong> ${esc(listing.housingGender || "—")}<br>
-        <strong>Laundry in building:</strong> ${listing.laundryInBuilding ? "Yes" : "No"}<br>
         <strong>Bringing roommate:</strong> ${listing.bringingRoommate ? `Yes${listing.totalPeople ? ` (${esc(listing.totalPeople)} total)` : ""}` : "No"}
       </div>
       <p class="modal-pitch">${esc(listing.pitch)}</p>

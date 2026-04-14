@@ -1033,3 +1033,23 @@ export function getBuildingByAddress(address) {
 export function getBuildingByName(buildingName) {
   return BUILDINGS.find((building) => building.name === buildingName) || null;
 }
+
+export function getBuildingsWithApartmentLayouts() {
+  return BUILDINGS.filter((building) =>
+    building.layouts.some((layout) => layout.startsWith("Apartment"))
+  ).map((building) => building.name);
+}
+
+export function getBuildingsWithOccupancy(occupancy) {
+  return BUILDINGS.filter((building) =>
+    building.layouts.some((layout) => layout.endsWith(occupancy))
+  ).map((building) => building.name);
+}
+
+export function getCampusGroupsWithOccupancy(occupancy) {
+  const buildingsWithOccupancy = getBuildingsWithOccupancy(occupancy);
+  return [...new Set(
+    BUILDINGS.filter((building) => buildingsWithOccupancy.includes(building.name))
+      .map((building) => building.group)
+  )];
+}

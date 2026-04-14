@@ -99,7 +99,7 @@ export async function handleSubmit(event) {
   const currentAddress = $("f-building").value;
   const layout = $("f-layout").value; // e.g. "Traditional Double"
   const roommateEl = document.querySelector("[name='f-roommate']:checked");
-  const laundryEl = document.querySelector("[name='f-laundry']:checked");
+
   const totalPeopleInput = $("f-total-people")?.value || "";
   const totalPeople = Number(totalPeopleInput);
   const pitch = censorProfanityInText($("f-pitch").value.trim());
@@ -125,7 +125,6 @@ export async function handleSubmit(event) {
   if (!currentAddress) return setErr("form-err", "Select your current address.");
   if (!layout) return setErr("form-err", "Select your room layout.");
   if (!roommateEl) return setErr("form-err", "Indicate whether you're bringing a roommate.");
-  if (!laundryEl) return setErr("form-err", "Select whether laundry is in the building.");
   if (roommateEl.value === "true") {
     if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 10) {
       return setErr("form-err", "If bringing a roommate, enter total people as a whole number from 2 to 10.");
@@ -194,7 +193,6 @@ export async function handleSubmit(event) {
       roomType,     // "Traditional" — used by browse type filter
       occupancy,    // "Double"      — used by browse occupancy filter
       bringingRoommate: roommateEl.value === "true",
-      laundryInBuilding: laundryEl.value === "true",
       totalPeople: roommateEl.value === "true" ? totalPeople : null,
       pitch,
       otherDetails,
