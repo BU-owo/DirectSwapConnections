@@ -97,6 +97,7 @@ function orderLayouts(layouts) {
 
 export default function BrowsePage() {
   const { listings, user, contactsMap, myListing } = useAppContext();
+  const canViewContacts = Boolean(myListing);
   const [expandedId, setExpandedId] = useState("");
   const [contactModalId, setContactModalId] = useState("");
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
@@ -195,6 +196,10 @@ export default function BrowsePage() {
 
   const expandedListing = filteredListings.find((item) => item.id === expandedId) || listings.find((item) => item.id === expandedId) || null;
 
+  function openExpandedListing(listingId) {
+    setExpandedId(listingId);
+  }
+
   if (!user) {
     return (
       <div id="panel-browse" className="panel">
@@ -211,7 +216,7 @@ export default function BrowsePage() {
         <div className="panel-top">
           <div>
             <h2 className="panel-title">Active Swap Listings</h2>
-            <p className="result-count">Login with BU email to unlock cards and search filters.</p>
+            <p className="result-count">Login with BU email to unlock listings and search filters.</p>
           </div>
         </div>
       </div>

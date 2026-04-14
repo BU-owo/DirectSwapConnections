@@ -52,3 +52,79 @@
     display: none;
   }
 }
+
+/* Keep browse results in table-row layout and neutralize card-grid overrides from styles.css. */
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: #fff;
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrap thead {
+  display: table-header-group;
+}
+
+.table-wrap tbody {
+  display: table-row-group;
+}
+
+.table-wrap tbody tr {
+  display: table-row;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.table-wrap tbody tr:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
+}
+
+.table-wrap tbody td,
+.table-wrap thead th {
+  display: table-cell;
+}
+
+.table-wrap tbody td {
+  border-top: 0;
+  max-width: 220px;
+}
+
+.table-wrap tbody td.td-listing {
+  width: 34%;
+}
+
+.table-wrap tbody td.td-pitch {
+  width: 40%;
+  max-width: none;
+}
+
+.table-wrap tbody td::before {
+  content: none;
+  display: none;
+}
+
+.contact-locked-cta {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+#panel-submit .form-card,
+#panel-submit .msg.msg-success {
+  margin-left: auto;
+  margin-right: auto;
+}
