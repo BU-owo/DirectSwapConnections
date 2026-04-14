@@ -93,6 +93,7 @@ function orderLayouts(layouts) {
 
 export default function BrowsePage() {
   const { listings, user, contactsMap, myListing } = useAppContext();
+  const canViewContacts = Boolean(myListing);
   const [expandedId, setExpandedId] = useState("");
   const [filters, setFilters] = useState({
     search: "",
@@ -212,7 +213,7 @@ export default function BrowsePage() {
         <div className="panel-top">
           <div>
             <h2 className="panel-title">Active Swap Listings</h2>
-            <p className="result-count">Login with BU email to unlock cards and search filters.</p>
+            <p className="result-count">Login with BU email to unlock listings and search filters.</p>
           </div>
         </div>
       </div>
@@ -401,7 +402,6 @@ export default function BrowsePage() {
         <table>
           <thead>
             <tr>
-              <th>Area</th>
               <th>Listing Info</th>
               <th>Room Pitch</th>
               <th className="hidden-mobile">Looking For</th>
@@ -412,7 +412,7 @@ export default function BrowsePage() {
           <tbody>
             {!filteredListings.length ? (
               <tr>
-                <td colSpan={6} className="td-empty">
+                <td colSpan={5} className="td-empty">
                   <div className="td-empty-icon">🏠</div>
                   <p>
                     {hasAnyFilter
@@ -439,8 +439,10 @@ export default function BrowsePage() {
 
                 return (
                   <tr key={listing.id}>
-                    <td><span className="badge badge-red">{cardPrimaryLocation}</span></td>
-                    <td>
+                    <td className="td-listing">
+                      <div style={{ marginBottom: 6 }}>
+                        <span className="badge badge-red">{cardPrimaryLocation}</span>
+                      </div>
                       <div className="info-badges">
                         <span className="badge badge-blue">{listing.housingGender || "-"}</span>{" "}
                         <span className="badge badge-grey">{listing.roomType || "-"}</span>{" "}
@@ -449,7 +451,7 @@ export default function BrowsePage() {
                         <span className="badge badge-gold">Number of people swapping: {movingCount}</span>
                       </div>
                     </td>
-                    <td>
+                    <td className="td-pitch">
                       <div>{listing.pitch || "-"}</div>
                       {listing.otherDetails ? <div className="td-sub">{listing.otherDetails}</div> : null}
                     </td>
@@ -457,12 +459,22 @@ export default function BrowsePage() {
                       <div className="td-sub">Shown in expanded view</div>
                     </td>
                     <td>
-                      <>
-                        {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`}>{listing.email}</a> : <span>-</span>}
-                        {contact.redditUsername ? <div className="td-sub">{contact.redditUsername}</div> : null}
-                        {contact.phone ? <div className="td-sub">{contact.phone}</div> : null}
-                        {contact.otherContact ? <div className="td-sub">{contact.otherContact}</div> : null}
-                      </>
+                      {canViewContacts ? (
+                        <>
+                          {listing.email ? <a className="contact-link" href={`mailto:${listing.email}`}>{listing.email}</a> : <span>-</span>}
+                          {contact.redditUsername ? <div className="td-sub">{contact.redditUsername}</div> : null}
+                          {contact.phone ? <div className="td-sub">{contact.phone}</div> : null}
+                          {contact.otherContact ? <div className="td-sub">{contact.otherContact}</div> : null}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-ghost-xs contact-locked-cta"
+                          onClick={() => navigate("/submit")}
+                        >
+                          click for contact info
+                        </button>
+                      )}
                     </td>
                     <td>
                       <div>{date}</div>
