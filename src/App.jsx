@@ -6,6 +6,7 @@ import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "reac
 import React, { useEffect, useState } from "react";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import BrowsePage from "./pages/BrowsePage";
+import HomePage from "./pages/HomePage";
 import SubmitPage from "./pages/SubmitPage";
 
 function Layout() {
@@ -14,6 +15,7 @@ function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const isHome = location.pathname === "/";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -63,7 +65,7 @@ function Layout() {
     <>
       <nav className={menuOpen ? "menu-open" : ""}>
         <NavLink
-          to="/browse"
+          to="/"
           className="nav-brand"
           onClick={() => setMenuOpen(false)}
         >
@@ -82,6 +84,13 @@ function Layout() {
         </button>
         <div className="nav-menu">
           <div className="nav-center">
+            <NavLink
+              to="/"
+              className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
+              end
+            >
+              Home
+            </NavLink>
             <NavLink
               to="/submit"
               className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
@@ -135,23 +144,28 @@ function Layout() {
         </div>
       </nav>
 
-      <div className="hero">
-        <h1>BU Housing<br /><em>Direct Swaps</em></h1>
-        <p>Find your perfect room swap. Submit your listing, browse others, and connect with fellow Terriers.</p>
-        <div className="hero-actions">
-          <button className="hero-cta-white" onClick={() => navigate("/submit")}>Submit a Listing</button>
-          <button className="hero-cta-ghost" onClick={() => navigate("/browse")}>Browse Listings</button>
+      {!isHome && (
+        <div className="hero">
+          <h1>BU Housing<br /><em>Direct Swaps</em></h1>
+          <p>Find your perfect room swap. Submit your listing, browse others, and connect with fellow Terriers.</p>
+          <div className="hero-actions">
+            <button className="hero-cta-white" onClick={() => navigate("/submit")}>Submit a Listing</button>
+            <button className="hero-cta-ghost" onClick={() => navigate("/browse")}>Browse Listings</button>
+          </div>
+          <div className="hero-pill"><span className="pill-dot"></span> BU students only - Login with @bu.edu to access the site</div>
+          {firebaseConfigError ? <div className="msg msg-error" style={{ marginTop: 12 }}>{firebaseConfigError}</div> : null}
+          {authError ? <div className="msg msg-error" style={{ marginTop: 12 }}>{authError}</div> : null}
         </div>
-        <div className="hero-pill"><span className="pill-dot"></span> BU students only - Login with @bu.edu to access the site</div>
-        {firebaseConfigError ? <div className="msg msg-error" style={{ marginTop: 12 }}>{firebaseConfigError}</div> : null}
-        {authError ? <div className="msg msg-error" style={{ marginTop: 12 }}>{authError}</div> : null}
-      </div>
+      )}
+      {isHome && firebaseConfigError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{firebaseConfigError}</div> : null}
+      {isHome && authError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{authError}</div> : null}
 
-      <main>
+      <main className={isHome ? "main-home" : ""}>
         <Routes>
+          <Route path="/" element={<HomePage />} />
           <Route path="/browse" element={<BrowsePage />} />
           <Route path="/submit" element={<SubmitPage />} />
-          <Route path="*" element={<Navigate to="/browse" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
