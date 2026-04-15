@@ -737,6 +737,7 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
 .form-card {
   background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 2.25rem 2.5rem; max-width: 820px;
+  margin:auto
 }
 .form-card-head {
   display: flex; justify-content: space-between; align-items: flex-start;
