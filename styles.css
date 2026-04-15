@@ -553,8 +553,16 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   overflow: hidden;
 }
 
+/* Shared grid only */
+.listing-header-row,
+.listing-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 200px) minmax(110px, 140px) minmax(150px, 2fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(60px, 60px);
+  gap: 16px;
+}
+
+/* Header styles stay separate */
 .listing-header-row {
-  display: flex;
   background: var(--red);
   color: #fff;
   font-size: .72rem;
@@ -564,21 +572,33 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   padding: 12px 16px;
 }
 
-.listing-header-area { flex: 0 0 120px; }
-.listing-header-info { flex: 0 0 140px; }
-.listing-header-pitch { flex: 2; }
-.listing-header-looking { flex: 1; min-width: 120px; }
-.listing-header-contact { flex: 1; min-width: 140px; }
-.listing-header-actions { flex: 0 0 100px; text-align: right; }
-
+/* Row styles stay separate */
 .listing-row {
-  display: flex;
   background: #fff;
   border-bottom: 1px solid var(--border);
   padding: 16px;
   transition: background .1s;
-  align-items: flex-start;
+  align-items: start;
 }
+
+/* Remove all flex: values from these */
+.listing-header-area,
+.listing-header-info,
+.listing-header-pitch,
+.listing-header-looking,
+.listing-header-contact,
+.listing-header-actions,
+.listing-row-area,
+.listing-row-info,
+.listing-row-pitch,
+.listing-row-looking,
+.listing-row-contact,
+.listing-row-actions {
+  /* No flex needed anymore */
+  min-width: 0; /* prevents grid blowout from long content */
+  padding-right: 0; /* not needed with gap */
+}
+
 
 .listing-row:last-child {
   border-bottom: none;
@@ -588,15 +608,6 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   background: #fff8f8;
 }
 
-.listing-row-area {
-  flex: 0 0 120px;
-  padding-right: 16px;
-}
-
-.listing-row-info {
-  flex: 0 0 140px;
-  padding-right: 16px;
-}
 
 .info-details {
   display: flex;
@@ -609,12 +620,6 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
 .info-occupancy,
 .info-people {
   margin-bottom: 2px;
-}
-
-.listing-row-pitch {
-  flex: 2;
-  padding-right: 16px;
-  min-width: 200px;
 }
 
 .pitch-content {
@@ -633,11 +638,6 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   font-style: italic;
 }
 
-.listing-row-looking {
-  flex: 1;
-  padding-right: 16px;
-  min-width: 120px;
-}
 
 .looking-summary {
   font-size: 0.85rem;
@@ -654,16 +654,6 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   color: var(--sub);
 }
 
-.listing-row-contact {
-  flex: 1;
-  padding-right: 16px;
-  min-width: 140px;
-}
-
-.listing-row-actions {
-  flex: 0 0 100px;
-  text-align: right;
-}
 
 .listing-row-date {
   font-size: 0.8rem;
@@ -1111,9 +1101,9 @@ a {
     margin-top: 8px;
   }
 
-  .listings-container {
-    gap: 8px;
-  }
+.listings-container {
+  overflow-x: auto;
+}
 
   .listing-row {
     border: 1px solid var(--border);
