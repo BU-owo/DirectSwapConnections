@@ -5,13 +5,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CAMPUS_GROUPS,
+  LARGE_STYLE_AREAS,
   getBuildingByAddress,
   getBuildingsForGroup,
-  getLargeResidenceAreas,
-  getLargeResidenceBuildings,
   getLayoutsForAddress,
   getLayoutsForGroups,
-  getLayoutsForLargeResidenceSelections,
+  getLayoutsForBuildingNames,
   getBuildingsWithApartmentLayouts,
   getCampusGroupsWithOccupancy,
 } from "../../js/housing-data.js";
@@ -32,6 +31,9 @@ const LAYOUT_TYPE_ORDER = {
   Suite: 4,
   "Semi Suite": 5,
 };
+
+const FENWAY_CAMPUS_GROUP = "Fenway Campus";
+const BUILD_LEVEL_GROUPS = new Set([LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP]);
 
 const CAMPUS_GROUP_BLOCKS = [
   {
@@ -185,77 +187,27 @@ export default function SubmitPage() {
   }, [contactsMap, myListing, user]);
 
   const isLargeCurrent = form.currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP;
+  const isNamedBuilding = [LARGE_STYLE_RESIDENCES_GROUP, "Fenway Campus", "Student Village"].includes(form.currentCampusGroup);
 
-  // Current address options depend on selected campus group and (for large residences) selected area.
+  // Current address options depend on selected campus group.
   const currentAddresses = useMemo(() => {
     if (!form.currentCampusGroup) return [];
-    const addresses = getBuildingsForGroup(form.currentCampusGroup);
-    if (!isLargeCurrent) return addresses;
-    if (!form.currentLargeResidenceArea) return [];
-    return addresses.filter((building) => building.area === form.currentLargeResidenceArea);
-  }, [form.currentCampusGroup, form.currentLargeResidenceArea, isLargeCurrent]);
+    return getBuildingsForGroup(form.currentCampusGroup);
+  }, [form.currentCampusGroup]);
 
   const currentLayouts = useMemo(() => {
     if (!form.currentAddress) return [];
     return orderLayouts(getLayoutsForAddress(form.currentAddress));
   }, [form.currentAddress]);
 
-  const wantedLargeSelected = form.wantedCampusGroups.includes(LARGE_STYLE_RESIDENCES_GROUP);
-
-  const wantedLargeBuildings = useMemo(() => {
-    if (!wantedLargeSelected) return [];
-    return getLargeResidenceBuildings(form.wantedLargeResidenceAreas).sort((a, b) => collator.compare(a.name, b.name));
-  }, [form.wantedCampusGroups, form.wantedLargeResidenceAreas, wantedLargeSelected]);
-
   const availableWantedLayouts = useMemo(() => {
-    // Merge layouts from selected non-large groups with selected large-residence buildings.
-    const nonLargeGroups = form.wantedCampusGroups.filter((group) => group !== LARGE_STYLE_RESIDENCES_GROUP);
-    const fromGroups = nonLargeGroups.length ? getLayoutsForGroups(nonLargeGroups) : [];
-    const fromLarge = wantedLargeSelected
-      ? getLayoutsForLargeResidenceSelections(
-          form.wantedLargeResidenceAreas,
-          form.wantedLargeResidenceBuildings
-        )
+    const regularGroups = form.wantedCampusGroups.filter((g) => !BUILD_LEVEL_GROUPS.has(g));
+    const fromGroups = regularGroups.length ? getLayoutsForGroups(regularGroups) : [];
+    const fromBuildings = form.wantedLargeResidenceBuildings.length
+      ? getLayoutsForBuildingNames(form.wantedLargeResidenceBuildings)
       : [];
-
-    return orderLayouts([...new Set([...fromGroups, ...fromLarge])]);
-  }, [
-    form.wantedCampusGroups,
-    form.wantedLargeResidenceAreas,
-    form.wantedLargeResidenceBuildings,
-    wantedLargeSelected,
-  ]);
-
-  useEffect(() => {
-    if (!wantedLargeSelected) {
-      setForm((prev) => ({
-        ...prev,
-        wantedLargeResidenceAreas: [],
-        wantedLargeResidenceBuildings: [],
-      }));
-      return;
-    }
-
-    setForm((prev) => {
-      const validAreas = getLargeResidenceAreas();
-      const nextAreas = prev.wantedLargeResidenceAreas.filter((area) => validAreas.includes(area));
-      const validBuildings = getLargeResidenceBuildings(nextAreas).map((building) => building.name);
-      const nextBuildings = prev.wantedLargeResidenceBuildings.filter((name) => validBuildings.includes(name));
-
-      if (
-        nextAreas.length === prev.wantedLargeResidenceAreas.length &&
-        nextBuildings.length === prev.wantedLargeResidenceBuildings.length
-      ) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        wantedLargeResidenceAreas: nextAreas,
-        wantedLargeResidenceBuildings: nextBuildings,
-      };
-    });
-  }, [wantedLargeSelected]);
+    return orderLayouts([...new Set([...fromGroups, ...fromBuildings])]);
+  }, [form.wantedCampusGroups, form.wantedLargeResidenceBuildings]);
 
   useEffect(() => {
     setForm((prev) => {
@@ -281,23 +233,47 @@ export default function SubmitPage() {
     setForm((prev) => ({
       ...prev,
       currentCampusGroup: value,
-      currentLargeResidenceArea: "",
       currentAddress: "",
       layout: "",
     }));
   }
 
   function handleAnyCampusToggle(checked) {
-    setForm((prev) => ({
-      ...prev,
-      wantedCampusGroups: checked ? [...CAMPUS_GROUPS] : [],
-    }));
+    setForm((prev) => {
+      const allBuildingGroupBuildings = checked
+        ? [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP].flatMap(
+            (group) => getBuildingsForGroup(group).map((b) => b.name)
+          )
+        : [];
+      return {
+        ...prev,
+        wantedCampusGroups: checked ? [...CAMPUS_GROUPS] : [],
+        wantedLargeResidenceBuildings: allBuildingGroupBuildings,
+      };
+    });
+  }
+
+  function handleBuildingToggle(buildingName, campusGroup, checked) {
+    setForm((prev) => {
+      const nextBuildings = toggleFromArray(prev.wantedLargeResidenceBuildings, buildingName, checked);
+      const groupBuildingNames = getBuildingsForGroup(campusGroup).map((b) => b.name);
+      const groupHasAny = nextBuildings.some((name) => groupBuildingNames.includes(name));
+      const nextGroups = toggleFromArray(prev.wantedCampusGroups, campusGroup, groupHasAny);
+      return { ...prev, wantedLargeResidenceBuildings: nextBuildings, wantedCampusGroups: nextGroups };
+    });
   }
 
   function handleCampusGroupToggle(group, checked) {
     setForm((prev) => {
       const nextGroups = toggleFromArray(prev.wantedCampusGroups, group, checked);
-      return { ...prev, wantedCampusGroups: nextGroups };
+      let nextBuildings = prev.wantedLargeResidenceBuildings;
+      if (BUILD_LEVEL_GROUPS.has(group)) {
+        const groupBuildingNames = getBuildingsForGroup(group).map((b) => b.name);
+        nextBuildings = checked
+          ? [...new Set([...nextBuildings, ...groupBuildingNames])]
+          : nextBuildings.filter((name) => !groupBuildingNames.includes(name));
+      }
+      return { ...prev, wantedCampusGroups: nextGroups, wantedLargeResidenceBuildings: nextBuildings };
     });
   }
 
@@ -307,7 +283,6 @@ export default function SubmitPage() {
 
     if (!form.housingGender) return "Select your housing assignment gender.";
     if (!form.currentCampusGroup) return "Select your campus group.";
-    if (isLargeCurrent && !form.currentLargeResidenceArea) return "Select your Large Residence area.";
     if (!form.currentAddress) return "Select your current address.";
     if (!form.layout) return "Select your room layout.";
     if (!form.bringingRoommate) return "Indicate whether you are bringing a roommate.";
@@ -319,12 +294,6 @@ export default function SubmitPage() {
     if (!form.pitch.trim()) return "Describe your room's best features.";
     if (!form.wantedGenders.length) return "Select at least one gender housing preference.";
     if (!form.wantedCampusGroups.length) return "Select at least one campus group you would consider.";
-    if (wantedLargeSelected && !form.wantedLargeResidenceAreas.length) {
-      return "Select at least one Large Residence area you would consider.";
-    }
-    if (wantedLargeSelected && !form.wantedLargeResidenceBuildings.length) {
-      return "Select at least one Large Residence building you would consider.";
-    }
     if (!form.wantedLayoutStyles.length) return "Select at least one layout style you would consider.";
     if (!form.redditUsername.trim() && !form.phone.trim() && !form.otherContact.trim()) {
       return "Add at least one contact method beyond your BU email.";
@@ -354,11 +323,6 @@ export default function SubmitPage() {
     const selectedBuilding = getBuildingByAddress(form.currentAddress);
     if (!selectedBuilding) {
       setError("Could not match address to BU housing data. Reselect campus group and address.");
-      return;
-    }
-
-    if (isLargeCurrent && selectedBuilding.area !== form.currentLargeResidenceArea) {
-      setError("Selected building does not match the chosen Large Residence area.");
       return;
     }
 
@@ -490,47 +454,46 @@ export default function SubmitPage() {
                 </select>
               </div>
 
-              {isLargeCurrent ? (
-                <div className="ffield">
-                  <label>Large Residence Area <span className="req">*</span></label>
-                  <select
-                    value={form.currentLargeResidenceArea}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        currentLargeResidenceArea: event.target.value,
-                        currentAddress: "",
-                        layout: "",
-                      }))
-                    }
-                  >
-                    <option value="">Select area...</option>
-                    {getLargeResidenceAreas().map((area) => (
-                      <option key={area} value={area}>{area}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
-
               <div className="ffield">
-                <label>{isLargeCurrent ? "Current Building Name" : "Current Address"} <span className="req">*</span></label>
+                <label>{isNamedBuilding ? "Current Building Name" : "Current Address"} <span className="req">*</span></label>
                 <select
                   value={form.currentAddress}
-                  disabled={!form.currentCampusGroup || (isLargeCurrent && !form.currentLargeResidenceArea)}
+                  disabled={!form.currentCampusGroup}
                   onChange={(event) => setForm((prev) => ({ ...prev, currentAddress: event.target.value, layout: "" }))}
                 >
-                  <option value="">{isLargeCurrent && !form.currentLargeResidenceArea ? "Select area first..." : "Select address..."}</option>
-                  {currentAddresses.sort((a, b) => collator.compare(isLargeCurrent ? a.name : a.address, isLargeCurrent ? b.name : b.address)).map((building) => (
-                    <option key={building.address} value={building.address}>
-                      {isLargeCurrent
-                        ? `${building.name}${building.address ? ` (${building.address})` : ""}`
-                        : building.name === building.address
-                          ? building.address
-                          : `${building.address} (${building.name})`}
-                    </option>
-                  ))}
+                  <option value="">Select {isNamedBuilding ? "building" : "address"}...</option>
+                  {isLargeCurrent ? (
+                    LARGE_STYLE_AREAS.map((area) => {
+                      const areaBuildings = currentAddresses
+                        .filter((b) => b.area === area)
+                        .sort((a, b) => collator.compare(a.name, b.name));
+                      if (!areaBuildings.length) return null;
+                      return (
+                        <optgroup key={area} label={area}>
+                          {areaBuildings.map((building) => (
+                            <option key={building.address} value={building.address}>{building.name}</option>
+                          ))}
+                        </optgroup>
+                      );
+                    })
+                  ) : (
+                    currentAddresses
+                      .sort((a, b) => collator.compare(isNamedBuilding ? a.name : a.address, isNamedBuilding ? b.name : b.address))
+                      .map((building) => (
+                        <option key={building.address} value={building.address}>
+                          {isNamedBuilding
+                            ? building.name
+                            : building.name === building.address
+                              ? building.address
+                              : `${building.address} (${building.name})`}
+                        </option>
+                      ))
+                  )}
                 </select>
-                <p className="fhint">This will be kept private. It is only used to select the correct layout options.</p>
+                {isNamedBuilding
+                  ? <p className="fhint">Your building name will be visible on your listing.</p>
+                  : <p className="fhint">Your address will be kept private. It is only used to select the correct layout options.</p>
+                }
               </div>
 
               <div className="ffield">
@@ -720,81 +683,58 @@ export default function SubmitPage() {
                   {CAMPUS_GROUP_BLOCKS.map((block) => {
                     const groups = block.groups.filter((group) => CAMPUS_GROUPS.includes(group));
                     if (!groups.length) return null;
+                    const isBuildingLevel = groups.length === 1 && BUILD_LEVEL_GROUPS.has(groups[0]);
 
                     return (
                       <div key={block.title} className="campus-group-block">
                         <h4 className="campus-group-block-title">{block.title}</h4>
                         <div className="campus-group-check-list">
-                          {groups.map((group) => (
-                            <label key={group} className="check-opt">
-                              <input
-                                type="checkbox"
-                                checked={form.wantedCampusGroups.includes(group)}
-                                onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
-                              />
-                              {group}
-                            </label>
-                          ))}
+                          {isBuildingLevel ? (() => {
+                            const group = groups[0];
+                            const groupBuildings = getBuildingsForGroup(group)
+                              .sort((a, b) => collator.compare(a.name, b.name));
+                            const allSelected = groupBuildings.length > 0 &&
+                              groupBuildings.every((b) => form.wantedLargeResidenceBuildings.includes(b.name));
+                            return (
+                              <>
+                                <label className="check-opt campus-select-all">
+                                  <input
+                                    type="checkbox"
+                                    checked={allSelected}
+                                    onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
+                                  />
+                                  <strong>Select all</strong>
+                                </label>
+                                {groupBuildings.map((building) => (
+                                  <label key={building.name} className="check-opt check-indented">
+                                    <input
+                                      type="checkbox"
+                                      checked={form.wantedLargeResidenceBuildings.includes(building.name)}
+                                      onChange={(event) => handleBuildingToggle(building.name, group, event.target.checked)}
+                                    />
+                                    {building.name}
+                                  </label>
+                                ))}
+                              </>
+                            );
+                          })() : (
+                            groups.map((group) => (
+                              <label key={group} className="check-opt">
+                                <input
+                                  type="checkbox"
+                                  checked={form.wantedCampusGroups.includes(group)}
+                                  onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
+                                />
+                                {group}
+                              </label>
+                            ))
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-
-              {wantedLargeSelected ? (
-                <div className="ffield full">
-                  <label>Large Residence Areas <span className="req">*</span></label>
-                  <div className="checks-inline checks-row">
-                    {getLargeResidenceAreas().map((area) => (
-                      <label key={area} className="check-opt">
-                        <input
-                          type="checkbox"
-                          checked={form.wantedLargeResidenceAreas.includes(area)}
-                          onChange={(event) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              wantedLargeResidenceAreas: toggleFromArray(
-                                prev.wantedLargeResidenceAreas,
-                                area,
-                                event.target.checked
-                              ),
-                            }))
-                          }
-                        />
-                        {area}
-                      </label>
-                    ))}
-                  </div>
-
-                  <label style={{ marginTop: 10 }}>Large Residence Building Names <span className="req">*</span></label>
-                  <div className="checks-scroll">
-                    {!wantedLargeBuildings.length ? (
-                      <p className="fhint">Select at least one area first.</p>
-                    ) : (
-                      wantedLargeBuildings.map((building) => (
-                        <label key={building.name} className="check-opt">
-                          <input
-                            type="checkbox"
-                            checked={form.wantedLargeResidenceBuildings.includes(building.name)}
-                            onChange={(event) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                wantedLargeResidenceBuildings: toggleFromArray(
-                                  prev.wantedLargeResidenceBuildings,
-                                  building.name,
-                                  event.target.checked
-                                ),
-                              }))
-                            }
-                          />
-                          {building.name}
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
 
               <div className="ffield full">
                 <label>Layout Styles <span className="req">*</span></label>

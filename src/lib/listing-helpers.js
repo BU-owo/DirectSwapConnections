@@ -36,10 +36,7 @@ export function buildListingPayload(formValues, selectedBuilding) {
     housingGender: formValues.housingGender,
     currentBuilding: selectedBuilding.name,
     currentCampusGroup: formValues.currentCampusGroup,
-    currentLargeResidenceArea:
-      formValues.currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP
-        ? formValues.currentLargeResidenceArea
-        : "",
+    currentLargeResidenceArea: selectedBuilding.area || "",
     currentAddress: formValues.currentAddress,
     layout: formValues.layout,
     roomType,

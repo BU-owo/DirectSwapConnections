@@ -548,8 +548,7 @@ export const housingData = [
     layouts: ["Traditional Single", "Traditional Triple"]
   },
   {
-    buildingName: "575 Commonwealth Avenue",
-    campusGroup: "Large Traditional-Style Residences",
+    buildingName: "575 Commonwealth Avenue (HoJo)",    campusGroup: "Large Traditional-Style Residences",
     address: "575 Commonwealth Avenue",
     layouts: ["Semi-Suite Double", "Traditional Single", "Traditional Triple"]
   },
@@ -909,7 +908,7 @@ export const LARGE_STYLE_AREA_BY_BUILDING = {
   "Warren Towers": "Central Campus",
   "Danielsen Hall": "East Campus",
   "610 Beacon Street": "East Campus",
-  "575 Commonwealth Avenue": "East Campus",
+  "575 Commonwealth Avenue (HoJo)": "East Campus",
   "The Towers": "East Campus",
   "Kilachand Hall": "East Campus",
 };
@@ -1024,6 +1023,14 @@ export function getLayoutsForLargeResidenceSelections(selectedAreas = [], select
   const buildings = getLargeResidenceBuildings(selectedAreas)
     .filter((building) => selectedBuildingNames.includes(building.name));
   return [...new Set(buildings.flatMap((building) => building.layouts))];
+}
+
+export function getLayoutsForBuildingNames(buildingNames = []) {
+  return [...new Set(
+    BUILDINGS
+      .filter((b) => buildingNames.includes(b.name))
+      .flatMap((b) => b.layouts)
+  )];
 }
 
 export function getBuildingByAddress(address) {

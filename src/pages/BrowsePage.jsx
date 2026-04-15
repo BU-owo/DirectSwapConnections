@@ -225,59 +225,68 @@ export default function BrowsePage() {
 
   return (
     <div id="panel-browse" className="panel">
-      {user && myListing ? (
-        <div className="my-preview">
-          <div className="my-preview-head">
-            <div className="my-preview-label">
-              <span className="preview-dot"></span>
-              Your Active Listing - this is what others see
+      {user && myListing ? (() => {
+        const myLocation =
+          [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, "Student Village"].includes(myListing.currentCampusGroup)
+            ? myListing.currentBuilding || "-"
+            : myListing.currentCampusGroup || myListing.currentBuilding || "-";
+        const myPeopleCount = myListing.bringingRoommate ? Number(myListing.totalPeople || 2) : 1;
+
+        return (
+          <div className="my-preview">
+            <div className="my-preview-head">
+              <div className="my-preview-label">
+                <span className="preview-dot"></span>
+                Your Active Listing — this is what others see
+              </div>
+              <button className="btn-ghost-xs" onClick={() => navigate("/submit")}>Edit</button>
             </div>
-            <button className="btn-ghost-xs" onClick={() => navigate("/submit")}>Edit</button>
+            <div className="my-preview-row">
+              <div className="listing-row-area">
+                <span className="badge badge-red">{myLocation}</span>
+              </div>
+              <div className="listing-row-info">
+                <div className="info-details">
+                  <span className="badge badge-blue">{myListing.housingGender || "-"}</span>
+                  <span className="badge badge-grey">{myListing.roomType || "-"}</span>
+                  <span className="badge badge-gold">{myListing.occupancy || "-"}</span>
+                  <span className="badge badge-purple">{myPeopleCount} {myPeopleCount === 1 ? "person" : "people"} swapping</span>
+                </div>
+              </div>
+              <div className="listing-row-pitch">
+                <div className="pitch-content">
+                  <div className="pitch-text">{myListing.pitch || "-"}</div>
+                  {myListing.otherDetails && (
+                    <div className="pitch-details">{myListing.otherDetails}</div>
+                  )}
+                </div>
+              </div>
+              <div className="listing-row-looking">
+                <div className="looking-summary">
+                  {(myListing.wantedGenders || []).length > 0 && (
+                    <div className="looking-val">{myListing.wantedGenders.join(", ")}</div>
+                  )}
+                  {(myListing.wantedCampusGroups || []).length > 0 && (
+                    <div className="looking-val looking-sub">
+                      {myListing.wantedCampusGroups.slice(0, 2).join(", ")}
+                      {myListing.wantedCampusGroups.length > 2 ? ` +${myListing.wantedCampusGroups.length - 2}` : ""}
+                    </div>
+                  )}
+                  {(myListing.wantedLayoutStyles || []).length > 0 && (
+                    <div className="looking-val looking-sub">
+                      {myListing.wantedLayoutStyles.slice(0, 2).join(", ")}
+                      {myListing.wantedLayoutStyles.length > 2 ? ` +${myListing.wantedLayoutStyles.length - 2}` : ""}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="listing-row-contact">
+                <span className="preview-contact-note">Your contact info is visible to others</span>
+              </div>
+            </div>
           </div>
-          <div className="my-preview-body">
-            <div className="preview-col">
-              <div className="preview-badges">
-                <span className="badge badge-red">{myListing.currentCampusGroup || "-"}</span>
-                {myListing.currentLargeResidenceArea ? (
-                  <span className="badge badge-grey">{myListing.currentLargeResidenceArea}</span>
-                ) : null}
-                <span className="badge badge-grey">{myListing.layout || "-"}</span>
-                <span className="badge badge-blue">{myListing.housingGender || "-"}</span>
-                {myListing.bringingRoommate ? (
-                  <span className="badge badge-gold">
-                    +Roommate{myListing.totalPeople ? ` (${myListing.totalPeople} total)` : ""}
-                  </span>
-                ) : null}
-              </div>
-              <div>
-                <div className="preview-pitch-label">Your pitch</div>
-                <div className="preview-pitch">{myListing.pitch || "-"}</div>
-                {myListing.otherDetails ? (
-                  <div style={{ fontSize: ".82rem", color: "var(--sub)", fontStyle: "italic", marginTop: 4 }}>
-                    {myListing.otherDetails}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="preview-col">
-              <div className="preview-looking">
-                <div><b>Looking for gender:</b> {(myListing.wantedGenders || []).join(", ") || "-"}</div>
-                <div><b>Campus groups:</b> {(myListing.wantedCampusGroups || []).join(", ") || "-"}</div>
-                {(myListing.wantedCampusGroups || []).includes(LARGE_STYLE_RESIDENCES_GROUP) ? (
-                  <>
-                    <div><b>Large residence areas:</b> {(myListing.wantedLargeResidenceAreas || []).join(", ") || "-"}</div>
-                    <div><b>Large residence buildings:</b> {(myListing.wantedLargeResidenceBuildings || []).join(", ") || "-"}</div>
-                  </>
-                ) : null}
-                <div><b>Layout styles:</b> {(myListing.wantedLayoutStyles || []).join(", ") || "-"}</div>
-              </div>
-              <div className="preview-contact-note">
-                Contact info is visible to signed-in BU students
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+        );
+      })() : null}
 
       <div className="panel-top">
         <div>
@@ -428,7 +437,20 @@ export default function BrowsePage() {
         </div>
 
         <div className="fsec">
-          <h3 className="fsec-title">Detailed Filters</h3>
+          <div
+            className="fsec-header"
+            onClick={() => setFiltersCollapsed((prev) => !prev)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", cursor: "pointer" }}
+          >
+            <h3 className="fsec-title" style={{ marginBottom: 0 }}>Detailed Filters</h3>
+            <button
+              className="btn-ghost-xs"
+              onClick={(e) => { e.stopPropagation(); setFiltersCollapsed((prev) => !prev); }}
+            >
+              {filtersCollapsed ? "Show" : "Hide"}
+            </button>
+          </div>
+          {!filtersCollapsed && (
           <div className="fgrid">
             <div className="ffield">
               <label>Gender Housing</label>
@@ -493,15 +515,7 @@ export default function BrowsePage() {
 
             <div className="ffield full">
               <label>Campus Groups</label>
-              <button
-                className="btn-ghost-xs"
-                onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                style={{ marginBottom: '8px', alignSelf: 'flex-start' }}
-              >
-                {filtersCollapsed ? 'Show Detailed Filters' : 'Hide Detailed Filters'}
-              </button>
-              {!filtersCollapsed && (
-                <div className="campus-group-blocks">
+              <div className="campus-group-blocks">
                   {CAMPUS_GROUP_BLOCKS.map((block) => {
                     const groups = block.groups.filter((group) => CAMPUS_GROUPS.includes(group));
                     if (!groups.length) return null;
@@ -579,8 +593,7 @@ export default function BrowsePage() {
                       </div>
                     );
                   })}
-                </div>
-              )}
+              </div>
             </div>
 
             <div className="ffield full">
@@ -631,14 +644,15 @@ export default function BrowsePage() {
               </div>
             </div>
 
-            <div className="ffield">
-              <label>Sort</label>
-              <select value={filters.sort} onChange={(event) => setFilters((prev) => ({ ...prev, sort: event.target.value }))}>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="building">Building A-Z</option>
-              </select>
-            </div>
+          </div>
+          )}
+          <div className="fsec-sort-row">
+            <label className="fsec-sort-label">Sort</label>
+            <select value={filters.sort} onChange={(event) => setFilters((prev) => ({ ...prev, sort: event.target.value }))}>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="building">Building A-Z</option>
+            </select>
           </div>
         </div>
       </div>
@@ -672,14 +686,14 @@ export default function BrowsePage() {
               : "-";
 
             const cardPrimaryLocation =
-              listing.currentCampusGroup === LARGE_STYLE_RESIDENCES_GROUP || listing.currentCampusGroup === FENWAY_CAMPUS_GROUP
+              [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, "Student Village"].includes(listing.currentCampusGroup)
                 ? listing.currentBuilding || "-"
                 : listing.currentCampusGroup || listing.currentBuilding || "-";
 
             const movingCount = listing.bringingRoommate ? Number(listing.totalPeople || 2) : 1;
 
             return (
-              <div key={listing.id} className="listing-row">
+              <div key={listing.id} className="listing-row" onClick={() => setExpandedId(listing.id)} style={{ cursor: "pointer" }}>
                 <div className="listing-row-area">
                   <span className="badge badge-red">{cardPrimaryLocation}</span>
                 </div>
@@ -695,7 +709,7 @@ export default function BrowsePage() {
                       <span className="badge badge-gold">{listing.occupancy || "-"}</span>
                     </div>
                     <div className="info-people">
-                      <span className="badge badge-purple">{movingCount} people swapping</span>
+                      <span className="badge badge-purple">{movingCount} {movingCount === 1 ? "person" : "people"} swapping</span>
                     </div>
                   </div>
                 </div>
@@ -712,29 +726,27 @@ export default function BrowsePage() {
                 </div>
                 <div className="listing-row-looking">
                   <div className="looking-summary">
-                    <div className="looking-gender">{(listing.wantedGenders || []).join(", ") || "Any"}</div>
-                    <div className="looking-quick">
-                      {listing.wantedLayoutStyles?.some(layout => layout.includes("Apartment") || layout.includes("Studio")) && "Any Apartment"}
-                      {listing.wantedLayoutStyles?.some(layout => layout.includes("Single")) && "Any Single"}
-                      {listing.wantedLayoutStyles?.some(layout => layout.includes("Double")) && "Any Double"}
-                      {listing.wantedLayoutStyles?.some(layout => layout.includes("Triple")) && "Any Triple"}
-                      {listing.wantedLayoutStyles?.some(layout => layout.includes("Quad")) && "Any Quad"}
-                    </div>
-                    <div className="looking-location">
-                      {(listing.wantedCampusGroups || []).slice(0, 2).join(", ") || "Any"}
-                      {(listing.wantedCampusGroups || []).length > 2 && "..."}
-                    </div>
-                    {listing.wantedLayoutStyles && listing.wantedLayoutStyles.length > 0 && (
-                      <button className="btn-ghost-xs" style={{fontSize: '0.75rem', padding: '2px 6px', marginTop: '4px'}} onClick={() => setExpandedId(listing.id)}>
-                        Read more
-                      </button>
+                    {(listing.wantedGenders || []).length > 0 && (
+                      <div className="looking-val">{listing.wantedGenders.join(", ")}</div>
+                    )}
+                    {(listing.wantedCampusGroups || []).length > 0 && (
+                      <div className="looking-val looking-sub">
+                        {listing.wantedCampusGroups.slice(0, 2).join(", ")}
+                        {listing.wantedCampusGroups.length > 2 ? ` +${listing.wantedCampusGroups.length - 2}` : ""}
+                      </div>
+                    )}
+                    {(listing.wantedLayoutStyles || []).length > 0 && (
+                      <div className="looking-val looking-sub">
+                        {listing.wantedLayoutStyles.slice(0, 2).join(", ")}
+                        {listing.wantedLayoutStyles.length > 2 ? ` +${listing.wantedLayoutStyles.length - 2}` : ""}
+                      </div>
                     )}
                   </div>
                 </div>
                 <div className="listing-row-contact">
                   <button 
                     className="btn-ghost-xs contact-btn" 
-                    onClick={() => setContactModalId(listing.id)}
+                    onClick={(e) => { e.stopPropagation(); setContactModalId(listing.id); }}
                     style={{fontSize: '0.75rem', padding: '4px 8px'}}
                   >
                     Click to see contact
