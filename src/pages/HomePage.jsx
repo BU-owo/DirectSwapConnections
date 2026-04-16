@@ -1,10 +1,12 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 
 export default function HomePage() {
   const { user, myListing, signInWithGoogle } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
+  const ctaClass = (path) => (location.pathname === path ? "hero-cta-white" : "hero-cta-ghost");
 
   return (
     <div className="home-page">
@@ -24,11 +26,11 @@ export default function HomePage() {
             your room and take theirs.
           </p>
           <div className="home-hero-actions">
-            <button className="hero-cta-white" onClick={() => navigate("/browse")}>
-              Browse Listings
-            </button>
-            <button className="hero-cta-ghost" onClick={() => navigate("/submit")}>
+            <button className={ctaClass("/submit")} onClick={() => navigate("/submit")}>
               {myListing ? "Edit My Listing" : "Submit a Listing"}
+            </button>
+            <button className={ctaClass("/browse")} onClick={() => navigate("/browse")}>
+              Browse Listings
             </button>
           </div>
           {!user && (
@@ -146,11 +148,11 @@ export default function HomePage() {
       <section className="home-bottom-cta">
         <h2>Ready to find your swap?</h2>
         <div className="home-hero-actions">
-          <button className="hero-cta-white" onClick={() => navigate("/browse")}>
-            Browse Listings
-          </button>
-          <button className="hero-cta-ghost" onClick={() => navigate("/submit")}>
+          <button className={ctaClass("/submit")} onClick={() => navigate("/submit")}>
             {myListing ? "Edit My Listing" : "Submit a Listing"}
+          </button>
+          <button className={ctaClass("/browse")} onClick={() => navigate("/browse")}>
+            Browse Listings
           </button>
         </div>
       </section>

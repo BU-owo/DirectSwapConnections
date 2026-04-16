@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:host": "vite --host localhost --port 4174 --strictPort",
     "prebuild": "mkdir -p public && cp firebase-config.js public/firebase-config.js",
     "build": "vite build",
     "preview": "vite preview"
