@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  BUILDINGS,
   CAMPUS_GROUPS,
   LARGE_STYLE_AREAS,
   getBuildingByAddress,
@@ -33,7 +34,9 @@ const LAYOUT_TYPE_ORDER = {
 };
 
 const FENWAY_CAMPUS_GROUP = "Fenway Campus";
-const BUILD_LEVEL_GROUPS = new Set([LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP]);
+const STUDENT_VILLAGE_GROUP = "Student Village";
+const BUILD_LEVEL_GROUPS = new Set([LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, STUDENT_VILLAGE_GROUP]);
+const LAYOUT_OCCUPANCY_FILTERS = ["Single", "Double", "Triple", "Quad"];
 
 const CAMPUS_GROUP_BLOCKS = [
   {
@@ -142,11 +145,17 @@ export default function SubmitPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
+  const [quickOccupancies, setQuickOccupancies] = useState([]);
+  const [quickRoomTypes, setQuickRoomTypes] = useState([]);
+  const [layoutOccupancyFilters, setLayoutOccupancyFilters] = useState([]);
 
   // Keep form state synchronized with auth/listing context transitions.
   useEffect(() => {
     if (!user) {
       setForm(DEFAULT_FORM);
+      setQuickOccupancies([]);
+      setQuickRoomTypes([]);
+      setLayoutOccupancyFilters([]);
       setError("");
       setSuccess("");
       return;
@@ -159,10 +168,16 @@ export default function SubmitPage() {
         phone: prev.phone,
         otherContact: prev.otherContact,
       }));
+      setQuickOccupancies([]);
+      setQuickRoomTypes([]);
+      setLayoutOccupancyFilters([]);
       return;
     }
 
     const contact = contactsMap[user.uid] || {};
+    setQuickOccupancies([]);
+    setQuickRoomTypes([]);
+    setLayoutOccupancyFilters([]);
     setForm({
       housingGender: myListing.housingGender || "",
       currentCampusGroup: myListing.currentCampusGroup || "",
@@ -219,6 +234,26 @@ export default function SubmitPage() {
   }, [availableWantedLayouts]);
 
   useEffect(() => {
+    const nextManagedLayouts = availableWantedLayouts.filter((layout) => {
+      const { occupancy } = splitLayout(layout);
+      return layoutOccupancyFilters.includes(occupancy);
+    });
+
+    setForm((prev) => {
+      const nextLayouts = [...new Set([...prev.wantedLayoutStyles, ...nextManagedLayouts])];
+
+      if (
+        nextLayouts.length === prev.wantedLayoutStyles.length &&
+        nextLayouts.every((layout, index) => layout === prev.wantedLayoutStyles[index])
+      ) {
+        return prev;
+      }
+
+      return { ...prev, wantedLayoutStyles: nextLayouts };
+    });
+  }, [availableWantedLayouts, layoutOccupancyFilters]);
+
+  useEffect(() => {
     setForm((prev) => {
       const allowed = allowedWantedGenders(prev.housingGender);
       const nextWanted = prev.wantedGenders.filter((gender) => allowed.has(gender));
@@ -228,6 +263,42 @@ export default function SubmitPage() {
   }, [form.housingGender]);
 
   const allowedGenders = allowedWantedGenders(form.housingGender);
+
+  // All possible layouts across all buildings — used to compute quick filter cross-products.
+  const allPossibleLayouts = useMemo(() => orderLayouts(getLayoutsForGroups(CAMPUS_GROUPS)), []);
+
+  /**
+   * Applies quick filters using AND intersection logic (same as BrowsePage).
+   * quickRoomTypes: ["Apartment", "Studio"] for apartment button; occupancy types for occupancy buttons.
+   * Matching layouts = intersection of active occupancies × active roomTypes.
+   */
+  function applyQuickFilters(newOccupancies, newRoomTypes) {
+    const matchingLayouts = (newOccupancies.length === 0 && newRoomTypes.length === 0)
+      ? []
+      : allPossibleLayouts.filter((layout) => {
+          const { layoutType, occupancy } = splitLayout(layout);
+          const typeKey = layoutType.replace(/-/g, " ");
+          const roomTypeMatch = newRoomTypes.length === 0 || newRoomTypes.some((rt) => rt === typeKey || rt === layoutType);
+          const occupancyMatch = newOccupancies.length === 0 || newOccupancies.includes(occupancy);
+          return roomTypeMatch && occupancyMatch;
+        });
+
+    const matchingCampusGroups = matchingLayouts.length
+      ? [...new Set(BUILDINGS.filter((b) => b.layouts.some((l) => matchingLayouts.includes(l))).map((b) => b.group))]
+      : [];
+
+    // For build-level groups (Large Traditional, Fenway), populate wantedLargeResidenceBuildings.
+    const buildLevelBuildings = BUILDINGS
+      .filter((b) => BUILD_LEVEL_GROUPS.has(b.group) && b.layouts.some((l) => matchingLayouts.includes(l)))
+      .map((b) => b.name);
+
+    setForm((prev) => ({
+      ...prev,
+      wantedCampusGroups: matchingCampusGroups,
+      wantedLargeResidenceBuildings: buildLevelBuildings,
+      wantedLayoutStyles: matchingLayouts,
+    }));
+  }
 
   function handleCurrentGroupChange(value) {
     setForm((prev) => ({
@@ -241,7 +312,7 @@ export default function SubmitPage() {
   function handleAnyCampusToggle(checked) {
     setForm((prev) => {
       const allBuildingGroupBuildings = checked
-        ? [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP].flatMap(
+        ? [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, STUDENT_VILLAGE_GROUP].flatMap(
             (group) => getBuildingsForGroup(group).map((b) => b.name)
           )
         : [];
@@ -277,6 +348,46 @@ export default function SubmitPage() {
     });
   }
 
+  function isCampusGroupFullySelected(group, formState = form) {
+    if (!BUILD_LEVEL_GROUPS.has(group)) {
+      return formState.wantedCampusGroups.includes(group);
+    }
+
+    const groupBuildings = getBuildingsForGroup(group).map((building) => building.name);
+    return groupBuildings.length > 0 && groupBuildings.every((name) => formState.wantedLargeResidenceBuildings.includes(name));
+  }
+
+  function handleCampusBlockToggle(groups, checked) {
+    setForm((prev) => {
+      const nextGroups = new Set(prev.wantedCampusGroups);
+      const nextBuildings = new Set(prev.wantedLargeResidenceBuildings);
+
+      groups.forEach((group) => {
+        if (checked) {
+          nextGroups.add(group);
+        } else {
+          nextGroups.delete(group);
+        }
+
+        if (BUILD_LEVEL_GROUPS.has(group)) {
+          getBuildingsForGroup(group).forEach((building) => {
+            if (checked) {
+              nextBuildings.add(building.name);
+            } else {
+              nextBuildings.delete(building.name);
+            }
+          });
+        }
+      });
+
+      return {
+        ...prev,
+        wantedCampusGroups: [...nextGroups],
+        wantedLargeResidenceBuildings: [...nextBuildings],
+      };
+    });
+  }
+
   function validateForm() {
     // Validate progressive dependencies in the same order users complete the form.
     const totalPeople = Number(form.totalPeople);
@@ -295,9 +406,6 @@ export default function SubmitPage() {
     if (!form.wantedGenders.length) return "Select at least one gender housing preference.";
     if (!form.wantedCampusGroups.length) return "Select at least one campus group you would consider.";
     if (!form.wantedLayoutStyles.length) return "Select at least one layout style you would consider.";
-    if (!form.redditUsername.trim() && !form.phone.trim() && !form.otherContact.trim()) {
-      return "Add at least one contact method beyond your BU email.";
-    }
     if (!form.agreedToTerms) return "You must agree to the terms and conditions.";
 
     const allowed = allowedWantedGenders(form.housingGender);
@@ -358,6 +466,8 @@ export default function SubmitPage() {
     try {
       await deleteMyListing();
       setForm(DEFAULT_FORM);
+      setQuickOccupancies([]);
+      setQuickRoomTypes([]);
       setSuccess("Your listing has been removed.");
     } catch (deleteError) {
       console.error(deleteError);
@@ -389,6 +499,68 @@ export default function SubmitPage() {
     });
     return base;
   }, [availableWantedLayouts]);
+
+  function handleLayoutColumnToggle(layouts) {
+    if (!layouts.length) return;
+
+    setForm((prev) => {
+      const allSelected = layouts.every((layout) => prev.wantedLayoutStyles.includes(layout));
+      const nextLayoutStyles = allSelected
+        ? prev.wantedLayoutStyles.filter((layout) => !layouts.includes(layout))
+        : [...new Set([...prev.wantedLayoutStyles, ...layouts])];
+
+      return {
+        ...prev,
+        wantedLayoutStyles: nextLayoutStyles,
+      };
+    });
+  }
+
+  function handleLayoutColumnKeyDown(event, layouts) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleLayoutColumnToggle(layouts);
+  }
+
+  function stopLayoutColumnToggle(event) {
+    event.stopPropagation();
+  }
+
+  function handleCampusBlockCardToggle(isBuildingLevel, groups, checked) {
+    if (isBuildingLevel) {
+      handleCampusGroupToggle(groups[0], checked);
+      return;
+    }
+
+    handleCampusBlockToggle(groups, checked);
+  }
+
+  function handleCampusBlockCardKeyDown(event, isBuildingLevel, groups, checked) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleCampusBlockCardToggle(isBuildingLevel, groups, checked);
+  }
+
+  function stopCampusBlockToggle(event) {
+    event.stopPropagation();
+  }
+
+  function handleLayoutOccupancyToggle(occupancy) {
+    const matchingLayouts = availableWantedLayouts.filter((layout) => splitLayout(layout).occupancy === occupancy);
+
+    setLayoutOccupancyFilters((prev) => {
+      const isActive = prev.includes(occupancy);
+
+      setForm((currentForm) => ({
+        ...currentForm,
+        wantedLayoutStyles: isActive
+          ? currentForm.wantedLayoutStyles.filter((layout) => !matchingLayouts.includes(layout))
+          : [...new Set([...currentForm.wantedLayoutStyles, ...matchingLayouts])],
+      }));
+
+      return isActive ? prev.filter((item) => item !== occupancy) : [...prev, occupancy];
+    });
+  }
 
   if (!user) {
     return (
@@ -567,77 +739,53 @@ export default function SubmitPage() {
               <h3 className="section-title">Quick Filters</h3>
               <div className="quick-filters">
                 <button
-                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Apartment") || layout.includes("Studio")) ? "active" : ""}`}
+                  className={`quick-filter-btn ${quickRoomTypes.includes("Apartment") ? "active" : ""}`}
                   onClick={() => {
-                    const hasApartments = form.wantedLayoutStyles?.some(layout => layout.includes("Apartment") || layout.includes("Studio"));
-                    const apartmentLayouts = ["Apartment Single", "Apartment Double", "Apartment Triple", "Studio Single", "Studio Double", "Studio Triple"];
-                    const apartmentGroups = ["South Campus Apartments", "East Campus Apartments", "Central Campus Apartments", "Student Village"];
-                    setForm((prev) => ({
-                      ...prev,
-                      wantedLayoutStyles: hasApartments
-                        ? prev.wantedLayoutStyles.filter(layout => !apartmentLayouts.includes(layout))
-                        : [...(prev.wantedLayoutStyles || []), ...apartmentLayouts],
-                      wantedCampusGroups: hasApartments
-                        ? prev.wantedCampusGroups.filter(group => !apartmentGroups.includes(group))
-                        : [...new Set([...(prev.wantedCampusGroups || []), ...apartmentGroups])],
-                    }));
+                    const isActive = quickRoomTypes.includes("Apartment");
+                    const newRoomTypes = isActive
+                      ? quickRoomTypes.filter((rt) => rt !== "Apartment" && rt !== "Studio")
+                      : [...new Set([...quickRoomTypes, "Apartment", "Studio"])];
+                    setQuickRoomTypes(newRoomTypes);
+                    applyQuickFilters(quickOccupancies, newRoomTypes);
                   }}
                 >
                   Any Apartment
                 </button>
                 <button
-                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Single")) ? "active" : ""}`}
+                  className={`quick-filter-btn ${quickOccupancies.includes("Single") ? "active" : ""}`}
                   onClick={() => {
-                    const hasSingles = form.wantedLayoutStyles?.some(layout => layout.includes("Single"));
-                    const singleLayouts = ["Apartment Single", "Studio Single", "Traditional Single", "Suite Single", "Semi-Suite Single"];
-                    const singleGroups = getCampusGroupsWithOccupancy("Single");
-                    setForm((prev) => ({
-                      ...prev,
-                      wantedLayoutStyles: hasSingles
-                        ? prev.wantedLayoutStyles.filter(layout => !singleLayouts.includes(layout))
-                        : [...(prev.wantedLayoutStyles || []), ...singleLayouts],
-                      wantedCampusGroups: hasSingles
-                        ? prev.wantedCampusGroups.filter(group => !singleGroups.includes(group))
-                        : [...new Set([...(prev.wantedCampusGroups || []), ...singleGroups])],
-                    }));
+                    const isActive = quickOccupancies.includes("Single");
+                    const newOccupancies = isActive
+                      ? quickOccupancies.filter((o) => o !== "Single")
+                      : [...quickOccupancies, "Single"];
+                    setQuickOccupancies(newOccupancies);
+                    applyQuickFilters(newOccupancies, quickRoomTypes);
                   }}
                 >
                   Any Single
                 </button>
                 <button
-                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Double")) ? "active" : ""}`}
+                  className={`quick-filter-btn ${quickOccupancies.includes("Double") ? "active" : ""}`}
                   onClick={() => {
-                    const hasDoubles = form.wantedLayoutStyles?.some(layout => layout.includes("Double"));
-                    const doubleLayouts = ["Apartment Double", "Studio Double", "Traditional Double", "Suite Double", "Semi-Suite Double"];
-                    const doubleGroups = getCampusGroupsWithOccupancy("Double");
-                    setForm((prev) => ({
-                      ...prev,
-                      wantedLayoutStyles: hasDoubles
-                        ? prev.wantedLayoutStyles.filter(layout => !doubleLayouts.includes(layout))
-                        : [...(prev.wantedLayoutStyles || []), ...doubleLayouts],
-                      wantedCampusGroups: hasDoubles
-                        ? prev.wantedCampusGroups.filter(group => !doubleGroups.includes(group))
-                        : [...new Set([...(prev.wantedCampusGroups || []), ...doubleGroups])],
-                    }));
+                    const isActive = quickOccupancies.includes("Double");
+                    const newOccupancies = isActive
+                      ? quickOccupancies.filter((o) => o !== "Double")
+                      : [...quickOccupancies, "Double"];
+                    setQuickOccupancies(newOccupancies);
+                    applyQuickFilters(newOccupancies, quickRoomTypes);
                   }}
                 >
                   Any Double
                 </button>
                 <button
-                  className={`quick-filter-btn ${form.wantedLayoutStyles?.some(layout => layout.includes("Triple")) ? "active" : ""}`}
+                  className={`quick-filter-btn ${quickOccupancies.includes("Triple") ? "active" : ""}`}
                   onClick={() => {
-                    const hasTriples = form.wantedLayoutStyles?.some(layout => layout.includes("Triple"));
-                    const tripleLayouts = ["Apartment Triple", "Studio Triple", "Traditional Triple", "Suite Triple", "Semi-Suite Triple"];
-                    const tripleGroups = getCampusGroupsWithOccupancy("Triple");
-                    setForm((prev) => ({
-                      ...prev,
-                      wantedLayoutStyles: hasTriples
-                        ? prev.wantedLayoutStyles.filter(layout => !tripleLayouts.includes(layout))
-                        : [...(prev.wantedLayoutStyles || []), ...tripleLayouts],
-                      wantedCampusGroups: hasTriples
-                        ? prev.wantedCampusGroups.filter(group => !tripleGroups.includes(group))
-                        : [...new Set([...(prev.wantedCampusGroups || []), ...tripleGroups])],
-                    }));
+                    const isActive = quickOccupancies.includes("Triple");
+                    const newOccupancies = isActive
+                      ? quickOccupancies.filter((o) => o !== "Triple")
+                      : [...quickOccupancies, "Triple"];
+                    setQuickOccupancies(newOccupancies);
+                    applyQuickFilters(newOccupancies, quickRoomTypes);
                   }}
                 >
                   Any Triple
@@ -684,32 +832,55 @@ export default function SubmitPage() {
                     const groups = block.groups.filter((group) => CAMPUS_GROUPS.includes(group));
                     if (!groups.length) return null;
                     const isBuildingLevel = groups.length === 1 && BUILD_LEVEL_GROUPS.has(groups[0]);
+                    const blockAllSelected = groups.every((group) => isCampusGroupFullySelected(group));
+                    const selectAllChecked = isBuildingLevel
+                      ? isCampusGroupFullySelected(groups[0])
+                      : blockAllSelected;
+                    const handleSelectAllChange = isBuildingLevel
+                      ? (event) => handleCampusGroupToggle(groups[0], event.target.checked)
+                      : (event) => handleCampusBlockToggle(groups, event.target.checked);
 
                     return (
-                      <div key={block.title} className="campus-group-block">
-                        <h4 className="campus-group-block-title">{block.title}</h4>
+                      <div
+                        key={block.title}
+                        className={`campus-group-block campus-group-block-selectable ${selectAllChecked ? "is-selected" : ""}`.trim()}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={selectAllChecked}
+                        aria-label={`${selectAllChecked ? "Clear" : "Select"} all ${block.title.toLowerCase()}`}
+                        onClick={() => handleCampusBlockCardToggle(isBuildingLevel, groups, !selectAllChecked)}
+                        onKeyDown={(event) => handleCampusBlockCardKeyDown(event, isBuildingLevel, groups, !selectAllChecked)}
+                      >
+                        <div className="campus-group-block-head">
+                          <h4 className="campus-group-block-title">{block.title}</h4>
+                          <button
+                            type="button"
+                            className="campus-select-all-btn"
+                            aria-pressed={selectAllChecked}
+                            aria-label={`${selectAllChecked ? "Clear" : "Select"} all ${block.title.toLowerCase()}`}
+                            onClick={(event) => {
+                              stopCampusBlockToggle(event);
+                              handleSelectAllChange({ target: { checked: !selectAllChecked } });
+                            }}
+                          >
+                            <span className={`layout-col-toggle ${selectAllChecked ? "is-active" : ""}`.trim()}>
+                              All
+                            </span>
+                          </button>
+                        </div>
                         <div className="campus-group-check-list">
                           {isBuildingLevel ? (() => {
                             const group = groups[0];
                             const groupBuildings = getBuildingsForGroup(group)
                               .sort((a, b) => collator.compare(a.name, b.name));
-                            const allSelected = groupBuildings.length > 0 &&
-                              groupBuildings.every((b) => form.wantedLargeResidenceBuildings.includes(b.name));
                             return (
                               <>
-                                <label className="check-opt campus-select-all">
-                                  <input
-                                    type="checkbox"
-                                    checked={allSelected}
-                                    onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
-                                  />
-                                  <strong>Select all</strong>
-                                </label>
                                 {groupBuildings.map((building) => (
-                                  <label key={building.name} className="check-opt check-indented">
+                                  <label key={building.name} className="check-opt" onClick={stopCampusBlockToggle}>
                                     <input
                                       type="checkbox"
                                       checked={form.wantedLargeResidenceBuildings.includes(building.name)}
+                                      onClick={stopCampusBlockToggle}
                                       onChange={(event) => handleBuildingToggle(building.name, group, event.target.checked)}
                                     />
                                     {building.name}
@@ -718,16 +889,37 @@ export default function SubmitPage() {
                               </>
                             );
                           })() : (
-                            groups.map((group) => (
-                              <label key={group} className="check-opt">
-                                <input
-                                  type="checkbox"
-                                  checked={form.wantedCampusGroups.includes(group)}
-                                  onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
-                                />
-                                {group}
-                              </label>
-                            ))
+                            <>
+                              {groups.flatMap((group) => {
+                                if (group === STUDENT_VILLAGE_GROUP) {
+                                  return getBuildingsForGroup(group)
+                                    .sort((a, b) => collator.compare(a.name, b.name))
+                                    .map((building) => (
+                                      <label key={building.name} className="check-opt" onClick={stopCampusBlockToggle}>
+                                        <input
+                                          type="checkbox"
+                                          checked={form.wantedLargeResidenceBuildings.includes(building.name)}
+                                          onClick={stopCampusBlockToggle}
+                                          onChange={(event) => handleBuildingToggle(building.name, group, event.target.checked)}
+                                        />
+                                        {building.name}
+                                      </label>
+                                    ));
+                                }
+
+                                return (
+                                  <label key={group} className="check-opt" onClick={stopCampusBlockToggle}>
+                                    <input
+                                      type="checkbox"
+                                      checked={form.wantedCampusGroups.includes(group)}
+                                      onClick={stopCampusBlockToggle}
+                                      onChange={(event) => handleCampusGroupToggle(group, event.target.checked)}
+                                    />
+                                    {group}
+                                  </label>
+                                );
+                              })}
+                            </>
                           )}
                         </div>
                       </div>
@@ -737,21 +929,59 @@ export default function SubmitPage() {
               </div>
 
               <div className="ffield full">
-                <label>Layout Styles <span className="req">*</span></label>
+                <div className="layout-section-head">
+                  <label>Layout Styles <span className="req">*</span></label>
+                  <div className="layout-occupancy-toggles" aria-label="Layout occupancy toggles">
+                    {LAYOUT_OCCUPANCY_FILTERS.map((occupancy) => {
+                      const isActive = layoutOccupancyFilters.includes(occupancy);
+                      return (
+                        <button
+                          key={occupancy}
+                          type="button"
+                          className="layout-occupancy-toggle-btn"
+                          aria-pressed={isActive}
+                          onClick={() => handleLayoutOccupancyToggle(occupancy)}
+                        >
+                          <span className={`layout-col-toggle ${isActive ? "is-active" : ""}`.trim()}>
+                            {occupancy}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="layout-style-grid">
                   {LAYOUT_COLUMNS.map((column) => {
                     const options = groupedWantedLayouts[column] || [];
+                    const allSelected = options.length > 0 && options.every((layout) => form.wantedLayoutStyles.includes(layout));
                     return (
-                      <div className="layout-col" key={column}>
-                        <h4 className="layout-col-title">{column}</h4>
+                      <div
+                        className={`layout-col layout-col-selectable ${allSelected ? "is-selected" : ""}`.trim()}
+                        key={column}
+                        role="button"
+                        tabIndex={options.length ? 0 : -1}
+                        aria-pressed={allSelected}
+                        aria-label={`${allSelected ? "Clear" : "Select"} all available ${column} layout styles`}
+                        onClick={() => handleLayoutColumnToggle(options)}
+                        onKeyDown={(event) => handleLayoutColumnKeyDown(event, options)}
+                      >
+                        <div className="layout-col-head">
+                          <h4 className="layout-col-title">{column}</h4>
+                          {options.length ? (
+                            <span className={`layout-col-toggle ${allSelected ? "is-active" : ""}`.trim()}>
+                              All
+                            </span>
+                          ) : null}
+                        </div>
                         {!options.length ? (
                           <p className="layout-col-empty">No options</p>
                         ) : (
                           options.map((layout) => (
-                            <label key={layout} className="check-opt">
+                            <label key={layout} className="check-opt" onClick={stopLayoutColumnToggle}>
                               <input
                                 type="checkbox"
                                 checked={form.wantedLayoutStyles.includes(layout)}
+                                onClick={stopLayoutColumnToggle}
                                 onChange={(event) =>
                                   setForm((prev) => ({
                                     ...prev,
@@ -788,23 +1018,23 @@ export default function SubmitPage() {
           <section className="fsec">
             <h3 className="fsec-title">Contact Info</h3>
             <p className="fhint" style={{ marginBottom: "1rem" }}>
-              Only visible to signed-in BU students. Your BU email is included automatically.
+              <strong>Optional.</strong> Only visible to signed-in BU students. Your BU email is included automatically.
             </p>
             <div className="fgrid">
-              <div className="ffield">
-                <label>Reddit Username</label>
-                <input
-                  value={form.redditUsername}
-                  onChange={(event) => setForm((prev) => ({ ...prev, redditUsername: event.target.value }))}
-                  placeholder="u/yourname"
-                />
-              </div>
               <div className="ffield">
                 <label>Phone Number</label>
                 <input
                   value={form.phone}
                   onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
                   placeholder="617-555-0123"
+                />
+              </div>
+              <div className="ffield">
+                <label>Reddit Username</label>
+                <input
+                  value={form.redditUsername}
+                  onChange={(event) => setForm((prev) => ({ ...prev, redditUsername: event.target.value }))}
+                  placeholder="u/yourname"
                 />
               </div>
               <div className="ffield full">

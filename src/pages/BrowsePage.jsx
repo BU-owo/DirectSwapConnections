@@ -14,8 +14,6 @@ import {
   getLargeResidenceBuildings,
   getLayoutsForGroups,
   getLayoutsForLargeResidenceSelections,
-  getBuildingsWithApartmentLayouts,
-  getBuildingsWithOccupancy,
 } from "../../js/housing-data.js";
 import { LARGE_STYLE_RESIDENCES_GROUP, toMs } from "../lib/listing-helpers";
 
@@ -101,6 +99,8 @@ export default function BrowsePage() {
   const [expandedId, setExpandedId] = useState("");
   const [contactModalId, setContactModalId] = useState("");
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [quickOccupancies, setQuickOccupancies] = useState([]);
+  const [quickRoomTypes, setQuickRoomTypes] = useState([]);
   const [filters, setFilters] = useState({
     search: "",
     gender: [],
@@ -113,6 +113,30 @@ export default function BrowsePage() {
   const navigate = useNavigate();
 
   const largeResidenceAreas = useMemo(() => getLargeResidenceAreas(), []);
+  const allPossibleLayouts = useMemo(() => orderLayouts(getLayoutsForGroups(CAMPUS_GROUPS)), []);
+
+  function applyQuickFilters(newOccupancies, newRoomTypes) {
+    const matchingLayouts = (newOccupancies.length === 0 && newRoomTypes.length === 0)
+      ? []
+      : allPossibleLayouts.filter((layout) => {
+          const { layoutType, occupancy } = splitLayout(layout);
+          const typeKey = layoutType.replace(/-/g, " ");
+          const roomTypeMatch = newRoomTypes.length === 0 || newRoomTypes.some((rt) => rt === typeKey || rt === layoutType);
+          const occupancyMatch = newOccupancies.length === 0 || newOccupancies.includes(occupancy);
+          return roomTypeMatch && occupancyMatch;
+        });
+
+    const matchingBuildings = matchingLayouts.length
+      ? BUILDINGS.filter((b) => b.layouts.some((l) => matchingLayouts.includes(l))).map((b) => b.name)
+      : [];
+
+    setFilters((prev) => ({
+      ...prev,
+      selectedBuildings: matchingBuildings,
+      roomTypes: newRoomTypes,
+      occupancies: newOccupancies,
+    }));
+  }
 
   const allLayouts = useMemo(() => {
     // Filter cascade: selected buildings -> available layouts.
@@ -322,6 +346,8 @@ export default function BrowsePage() {
                 roommate: [],
                 sort: "newest",
               });
+              setQuickOccupancies([]);
+              setQuickRoomTypes([]);
               setFiltersCollapsed(true);
             }}
           >
@@ -333,102 +359,53 @@ export default function BrowsePage() {
           <h3 className="section-title">Quick Filters</h3>
           <div className="quick-filters">
             <button
-              className={`quick-filter-btn ${filters.roomTypes.includes("Apartment") && filters.roomTypes.includes("Studio") ? "active" : ""}`}
+              className={`quick-filter-btn ${quickRoomTypes.includes("Apartment") ? "active" : ""}`}
               onClick={() => {
-                const hasApartments = filters.roomTypes.includes("Apartment") && filters.roomTypes.includes("Studio");
-                const apartmentTypes = ["Apartment", "Studio"];
-                const apartmentBuildings = getBuildingsWithApartmentLayouts();
-
-                if (hasApartments) {
-                  // Remove all apartment/studio types and apartment buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    roomTypes: prev.roomTypes.filter((t) => !apartmentTypes.includes(t)),
-                    selectedBuildings: prev.selectedBuildings.filter((b) => !apartmentBuildings.includes(b)),
-                  }));
-                } else {
-                  // Add apartment and studio types, and apartment buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    roomTypes: [...new Set([...prev.roomTypes, ...apartmentTypes])],
-                    selectedBuildings: [...new Set([...prev.selectedBuildings, ...apartmentBuildings])],
-                  }));
-                }
+                const isActive = quickRoomTypes.includes("Apartment");
+                const newRoomTypes = isActive
+                  ? quickRoomTypes.filter((rt) => rt !== "Apartment" && rt !== "Studio")
+                  : [...new Set([...quickRoomTypes, "Apartment", "Studio"])];
+                setQuickRoomTypes(newRoomTypes);
+                applyQuickFilters(quickOccupancies, newRoomTypes);
               }}
             >
               Any Apartment
             </button>
             <button
-              className={`quick-filter-btn ${filters.occupancies.includes("Single") ? "active" : ""}`}
+              className={`quick-filter-btn ${quickOccupancies.includes("Single") ? "active" : ""}`}
               onClick={() => {
-                const hasSingles = filters.occupancies.includes("Single");
-                const singleBuildings = getBuildingsWithOccupancy("Single");
-
-                if (hasSingles) {
-                  // Remove single occupancy and single buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: prev.occupancies.filter((o) => o !== "Single"),
-                    selectedBuildings: prev.selectedBuildings.filter((b) => !singleBuildings.includes(b)),
-                  }));
-                } else {
-                  // Add single occupancy and single buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: [...new Set([...prev.occupancies, "Single"])],
-                    selectedBuildings: [...new Set([...prev.selectedBuildings, ...singleBuildings])],
-                  }));
-                }
+                const isActive = quickOccupancies.includes("Single");
+                const newOccupancies = isActive
+                  ? quickOccupancies.filter((o) => o !== "Single")
+                  : [...quickOccupancies, "Single"];
+                setQuickOccupancies(newOccupancies);
+                applyQuickFilters(newOccupancies, quickRoomTypes);
               }}
             >
               Any Single
             </button>
             <button
-              className={`quick-filter-btn ${filters.occupancies.includes("Double") ? "active" : ""}`}
+              className={`quick-filter-btn ${quickOccupancies.includes("Double") ? "active" : ""}`}
               onClick={() => {
-                const hasDoubles = filters.occupancies.includes("Double");
-                const doubleBuildings = getBuildingsWithOccupancy("Double");
-
-                if (hasDoubles) {
-                  // Remove double occupancy and double buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: prev.occupancies.filter((o) => o !== "Double"),
-                    selectedBuildings: prev.selectedBuildings.filter((b) => !doubleBuildings.includes(b)),
-                  }));
-                } else {
-                  // Add double occupancy and double buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: [...new Set([...prev.occupancies, "Double"])],
-                    selectedBuildings: [...new Set([...prev.selectedBuildings, ...doubleBuildings])],
-                  }));
-                }
+                const isActive = quickOccupancies.includes("Double");
+                const newOccupancies = isActive
+                  ? quickOccupancies.filter((o) => o !== "Double")
+                  : [...quickOccupancies, "Double"];
+                setQuickOccupancies(newOccupancies);
+                applyQuickFilters(newOccupancies, quickRoomTypes);
               }}
             >
               Any Double
             </button>
             <button
-              className={`quick-filter-btn ${filters.occupancies.includes("Triple") ? "active" : ""}`}
+              className={`quick-filter-btn ${quickOccupancies.includes("Triple") ? "active" : ""}`}
               onClick={() => {
-                const hasTriples = filters.occupancies.includes("Triple");
-                const tripleBuildings = getBuildingsWithOccupancy("Triple");
-
-                if (hasTriples) {
-                  // Remove triple occupancy and triple buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: prev.occupancies.filter((o) => o !== "Triple"),
-                    selectedBuildings: prev.selectedBuildings.filter((b) => !tripleBuildings.includes(b)),
-                  }));
-                } else {
-                  // Add triple occupancy and triple buildings
-                  setFilters((prev) => ({
-                    ...prev,
-                    occupancies: [...new Set([...prev.occupancies, "Triple"])],
-                    selectedBuildings: [...new Set([...prev.selectedBuildings, ...tripleBuildings])],
-                  }));
-                }
+                const isActive = quickOccupancies.includes("Triple");
+                const newOccupancies = isActive
+                  ? quickOccupancies.filter((o) => o !== "Triple")
+                  : [...quickOccupancies, "Triple"];
+                setQuickOccupancies(newOccupancies);
+                applyQuickFilters(newOccupancies, quickRoomTypes);
               }}
             >
               Any Triple
@@ -565,29 +542,51 @@ export default function BrowsePage() {
                               </label>
                             ))
                           ) : (
-                            // Show group checkboxes for other blocks
-                            groups.map((group) => (
-                              <label key={group} className="check-opt">
-                                <input
-                                  type="checkbox"
-                                  checked={filters.selectedBuildings.some(buildingName => {
-                                    const building = BUILDINGS.find(b => b.name === buildingName);
-                                    return building && building.group === group;
-                                  })}
-                                  onChange={(event) => {
-                                    const checked = event.target.checked;
-                                    const groupBuildings = BUILDINGS.filter(b => b.group === group).map(b => b.name);
-                                    setFilters((prev) => ({
-                                      ...prev,
-                                      selectedBuildings: checked
-                                        ? [...new Set([...prev.selectedBuildings, ...groupBuildings])]
-                                        : prev.selectedBuildings.filter((b) => !groupBuildings.includes(b)),
-                                    }));
-                                  }}
-                                />
-                                {group}
-                              </label>
-                            ))
+                            // Show group checkboxes for other blocks; Student Village shows individual buildings
+                            groups.flatMap((group) => {
+                              if (group === "Student Village") {
+                                return BUILDINGS.filter(b => b.group === "Student Village").map((building) => (
+                                  <label key={building.name} className="check-opt">
+                                    <input
+                                      type="checkbox"
+                                      checked={filters.selectedBuildings.includes(building.name)}
+                                      onChange={(event) => {
+                                        const checked = event.target.checked;
+                                        setFilters((prev) => ({
+                                          ...prev,
+                                          selectedBuildings: checked
+                                            ? [...new Set([...prev.selectedBuildings, building.name])]
+                                            : prev.selectedBuildings.filter((b) => b !== building.name),
+                                        }));
+                                      }}
+                                    />
+                                    {building.name}
+                                  </label>
+                                ));
+                              }
+                              return (
+                                <label key={group} className="check-opt">
+                                  <input
+                                    type="checkbox"
+                                    checked={filters.selectedBuildings.some(buildingName => {
+                                      const building = BUILDINGS.find(b => b.name === buildingName);
+                                      return building && building.group === group;
+                                    })}
+                                    onChange={(event) => {
+                                      const checked = event.target.checked;
+                                      const groupBuildings = BUILDINGS.filter(b => b.group === group).map(b => b.name);
+                                      setFilters((prev) => ({
+                                        ...prev,
+                                        selectedBuildings: checked
+                                          ? [...new Set([...prev.selectedBuildings, ...groupBuildings])]
+                                          : prev.selectedBuildings.filter((b) => !groupBuildings.includes(b)),
+                                      }));
+                                    }}
+                                  />
+                                  {group}
+                                </label>
+                              );
+                            })
                           )}
                         </div>
                       </div>
