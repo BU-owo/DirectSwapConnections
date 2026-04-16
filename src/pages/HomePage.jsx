@@ -16,8 +16,9 @@ export default function HomePage() {
             <span className="pill-dot"></span> BU Students Only
           </div>
           <h1 className="home-hero-title">
-            Direct Swap<br /><em>Connections</em>
+            Terrier<br /><em>Housing</em>
           </h1>
+          <p className="home-hero-formerly">Formerly Direct Swap Connections</p>
           <p className="home-hero-sub">
             The student-run platform for BU housing swaps. Find someone who wants
             your room and take theirs.
@@ -113,7 +114,7 @@ export default function HomePage() {
               when connecting with others.
             </p>
             <p style={{ marginTop: 10 }}>
-              Direct Swap Connections reserves the right to remove any listing at any time.
+              Terrier Housing reserves the right to remove any listing at any time.
               No financial exchanges for swaps — this is a violation of BU policy and will
               result in a ban from this site.
             </p>

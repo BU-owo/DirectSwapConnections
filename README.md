@@ -1,5 +1,5 @@
-# DirectSwapConnections
-# BU Direct Swap Connections
+# TerrierHousing
+# BU Terrier Housing
 
 A housing swap platform for BU students — GitHub Pages frontend, Firebase backend.
 Created by BUowo and Jayden Chon

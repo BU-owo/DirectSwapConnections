@@ -69,7 +69,7 @@ function Layout() {
           className="nav-brand"
           onClick={() => setMenuOpen(false)}
         >
-          Direct Swap <span>Connections</span>
+          Terrier <span>Housing</span>
         </NavLink>
         <button
           type="button"
@@ -174,7 +174,10 @@ function Layout() {
           <strong>Disclaimer:</strong> Not affiliated with or endorsed by Boston University. This is an independent, community-made tool. Use at your own discretion. Listing info is submitted by students and has not been verified. Please exercise caution and common sense when connecting with others and arranging swaps.
         </div>
         <div className="footer-contact">
-          <strong>Questions or issues?</strong> Email <a href="mailto:directswapconnections@gmail.com">directswapconnections@gmail.com</a>
+          <strong>Questions or issues?</strong> Email <a href="mailto:directswapconnections@gmail.com">directswapconnections@gmail.com</a> about Terrier Housing
+        </div>
+        <div className="footer-legacy-name">
+          Terrier Housing was formerly known as Direct Swap Connections.
         </div>
         <div className="footer-community">
           <strong>Need more help with housing?</strong> Join <a href="https://discord.gg/qFXzgSN58c" target="_blank" rel="noopener noreferrer">Terrier Hub Discord</a> for community support!

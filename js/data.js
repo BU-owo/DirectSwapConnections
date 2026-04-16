@@ -126,8 +126,8 @@ export async function handleSubmit(event) {
   if (!layout) return setErr("form-err", "Select your room layout.");
   if (!roommateEl) return setErr("form-err", "Indicate whether you're bringing a roommate.");
   if (roommateEl.value === "true") {
-    if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 10) {
-      return setErr("form-err", "If bringing a roommate, enter total people as a whole number from 2 to 10.");
+    if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 8) {
+      return setErr("form-err", "If bringing a roommate, enter total people as a whole number from 2 to 8.");
     }
   }
   if (!pitch) return setErr("form-err", "Describe your room's best features.");

@@ -287,8 +287,8 @@ export default function SubmitPage() {
     if (!form.layout) return "Select your room layout.";
     if (!form.bringingRoommate) return "Indicate whether you are bringing a roommate.";
     if (form.bringingRoommate === "true") {
-      if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 10) {
-        return "If bringing a roommate, total people must be a whole number from 2 to 10.";
+      if (!Number.isInteger(totalPeople) || totalPeople < 2 || totalPeople > 8) {
+        return "If bringing a roommate, total people must be a whole number from 2 to 8.";
       }
     }
     if (!form.pitch.trim()) return "Describe your room's best features.";
@@ -528,11 +528,11 @@ export default function SubmitPage() {
                   <input
                     type="number"
                     min={2}
-                    max={10}
+                    max={8}
                     step={1}
                     value={form.totalPeople}
                     onChange={(event) => setForm((prev) => ({ ...prev, totalPeople: event.target.value }))}
-                    placeholder="2 to 10"
+                    placeholder="2 to 8"
                   />
                 </div>
               ) : null}
@@ -827,7 +827,7 @@ export default function SubmitPage() {
                 <li>You will respond to inquiries from students whose offers fit your preferences to remain an active participant.</li>
                 <li>You will NOT offer any financial incentive for someone to trade with you. Doing so will immediately ban you from accessing this site</li>
                 <li>You will not abuse contact information provided, or reach out for any reason other than housing inquiry.</li>
-                <li>Direct Swap Connections reserves the right to deny access at any time. If you are not behaving as an engaged and respectful participant, you will be removed.</li>
+                <li>Terrier Housing reserves the right to deny access at any time. If you are not behaving as an engaged and respectful participant, you will be removed.</li>
               </ul>
               <p className="terms-foot">Not BU affiliated. Proceed at your own risk.</p>
               <label className="check-opt terms-check">

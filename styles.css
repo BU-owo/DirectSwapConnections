@@ -981,6 +981,13 @@ textarea { resize: vertical; min-height: 80px; }
   color: #fff; line-height: 1.05; margin-bottom: 1rem;
 }
 .home-hero-title em { color: var(--gold); font-style: italic; }
+.home-hero-formerly {
+  color: rgba(255,255,255,.72);
+  font-size: .88rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: -.15rem auto 1rem;
+}
 .home-hero-sub {
   color: rgba(255,255,255,.85); font-size: 1.05rem;
   line-height: 1.7; max-width: 520px; margin: 0 auto 2.25rem;
@@ -1090,6 +1097,11 @@ footer {
 .footer-contact {
   font-size: .82rem;
   color: var(--sub);
+}
+.footer-legacy-name {
+  font-size: .78rem;
+  color: rgba(92, 69, 0, .78);
+  letter-spacing: .02em;
 }
 .footer-contact a {
   color: var(--red);
