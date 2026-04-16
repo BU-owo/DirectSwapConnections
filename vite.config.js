@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig(({ mode }) => ({
-  // GitHub Pages serves this repo from /DirectSwapConnections/ in production.
-  base: mode === "production" ? "/DirectSwapConnections/" : "/",
+  // Custom domain terrierhousing.com — serve from root in production.
+  base: "/",
   server: {
     port: 4173,
   },
