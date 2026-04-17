@@ -537,6 +537,11 @@ tbody td { padding: 12px 14px; vertical-align: top; max-width: 220px; line-heigh
   padding: 3px 9px; border-radius: 100px;
   text-transform: uppercase; letter-spacing: .03em; white-space: nowrap;
 }
+.listing-row-area .badge {
+  white-space: normal;
+  word-break: break-word;
+  border-radius: 8px;
+}
 .badge-red  { background: var(--red-lt); color: var(--red-dk); }
 .badge-gold { background: var(--gold-lt); color: #7a5c00; }
 .badge-grey { background: #efefef; color: #555; }
@@ -1739,6 +1744,24 @@ tbody tr:hover { background: #fafaf8; }
   padding: 2px 6px;
   border-radius: 6px;
   font-size: .75rem;
+}
+
+.match-highlight {
+  background: #e8f5e9 !important;
+  border-color: #66bb6a !important;
+  color: #2e7d32 !important;
+  font-weight: 600;
+}
+
+.match-legend {
+  font-size: .75rem;
+  color: #2e7d32;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-bottom: 10px;
+  display: inline-block;
 }
 
 /* ── Mobile responsive ────────────────────────────────────────*/

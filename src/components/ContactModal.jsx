@@ -58,9 +58,6 @@ export default function ContactModal({ listing, contact, onClose }) {
             {showLargeDetails && (
               <>
                 <div className="modal-filter-group">
-                  <strong>Large residence areas:</strong> {joinOrDash(listing.wantedLargeResidenceAreas)}
-                </div>
-                <div className="modal-filter-group">
                   <strong>Large residence buildings:</strong> {joinOrDash(listing.wantedLargeResidenceBuildings)}
                 </div>
               </>

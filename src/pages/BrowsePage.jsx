@@ -761,7 +761,7 @@ export default function BrowsePage() {
         )}
       </div>
 
-      {expandedListing ? <ExpandModal listing={expandedListing} onClose={() => setExpandedId("")} /> : null}
+      {expandedListing ? <ExpandModal listing={expandedListing} myListing={myListing} onClose={() => setExpandedId("")} /> : null}
       {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId)} contact={contactsMap[contactModalId]} onClose={() => setContactModalId("")} /> : null}
     </div>
   );
