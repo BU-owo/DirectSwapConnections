@@ -792,6 +792,7 @@ export default function SubmitPage() {
                 </button>
               </div>
             </div>
+            <p className="fhint" style={{ textAlign: "center" }}><strong>Choose every option you would be open to living in.</strong></p>
 
             <div className="fgrid">
               <div className="ffield">
@@ -1004,7 +1005,7 @@ export default function SubmitPage() {
               </div>
 
               <div className="ffield full">
-                <label>Additional Details</label>
+                <label>Briefly Describe What You Want</label>
                 <textarea
                   value={form.wantedOtherDetails || ""}
                   onChange={(event) => setForm((prev) => ({ ...prev, wantedOtherDetails: event.target.value }))}

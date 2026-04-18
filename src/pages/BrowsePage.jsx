@@ -19,6 +19,15 @@ import { LARGE_STYLE_RESIDENCES_GROUP, toMs } from "../lib/listing-helpers";
 
 const FENWAY_CAMPUS_GROUP = "Fenway Campus";
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+const NAMED_BUILDING_GROUPS = new Set(["Large Traditional-Style Residences", "Fenway Campus", "Student Village"]);
+const BUILDING_TYPE_ORDER = {
+  "tone-apartment": 1,
+  "tone-brownstone": 2,
+  "tone-large": 3,
+  "tone-fenway": 4,
+  "tone-stuvi": 5,
+  "tone-generic": 99,
+};
 const OCCUPANCY_ORDER = { Single: 1, Double: 2, Triple: 3, Quad: 4 };
 const LAYOUT_TYPE_ORDER = {
   Apartment: 1,
@@ -86,6 +95,27 @@ function orderLayouts(layouts) {
 
     if (typeRankA !== typeRankB) return typeRankA - typeRankB;
 
+    const occA = OCCUPANCY_ORDER[splitA.occupancy] ?? Number.MAX_SAFE_INTEGER;
+    const occB = OCCUPANCY_ORDER[splitB.occupancy] ?? Number.MAX_SAFE_INTEGER;
+    if (occA !== occB) return occA - occB;
+    return collator.compare(a, b);
+  });
+}
+
+function buildingToneForGroup(groupName) {
+  if (!groupName) return "tone-generic";
+  if (groupName.includes("Apartments")) return "tone-apartment";
+  if (groupName.includes("Brownstones")) return "tone-brownstone";
+  if (groupName === "Large Traditional-Style Residences") return "tone-large";
+  if (groupName === "Fenway Campus") return "tone-fenway";
+  if (groupName === "Student Village") return "tone-stuvi";
+  return "tone-generic";
+}
+
+function orderLayoutsByOccupancy(layouts) {
+  return [...layouts].sort((a, b) => {
+    const splitA = splitLayout(a);
+    const splitB = splitLayout(b);
     const occA = OCCUPANCY_ORDER[splitA.occupancy] ?? Number.MAX_SAFE_INTEGER;
     const occB = OCCUPANCY_ORDER[splitB.occupancy] ?? Number.MAX_SAFE_INTEGER;
     if (occA !== occB) return occA - occB;
@@ -220,6 +250,41 @@ export default function BrowsePage() {
 
   const expandedListing = filteredListings.find((item) => item.id === expandedId) || listings.find((item) => item.id === expandedId) || null;
 
+  const myPreviewWantedBuildings = useMemo(() => {
+    if (!myListing) return [];
+
+    const buildingGroupByName = new Map(BUILDINGS.map((building) => [building.name, building.group]));
+    const seenLabels = new Set();
+    const items = [];
+
+    (myListing.wantedCampusGroups || []).forEach((groupName) => {
+      if (NAMED_BUILDING_GROUPS.has(groupName)) return;
+      if (seenLabels.has(groupName)) return;
+      seenLabels.add(groupName);
+      items.push({ label: groupName, tone: buildingToneForGroup(groupName) });
+    });
+
+    (myListing.wantedLargeResidenceBuildings || []).forEach((buildingName) => {
+      if (seenLabels.has(buildingName)) return;
+      seenLabels.add(buildingName);
+      items.push({ label: buildingName, tone: buildingToneForGroup(buildingGroupByName.get(buildingName)) });
+    });
+
+    return items
+      .sort((a, b) => {
+        const toneRankA = BUILDING_TYPE_ORDER[a.tone] ?? BUILDING_TYPE_ORDER["tone-generic"];
+        const toneRankB = BUILDING_TYPE_ORDER[b.tone] ?? BUILDING_TYPE_ORDER["tone-generic"];
+        if (toneRankA !== toneRankB) return toneRankA - toneRankB;
+        return collator.compare(a.label, b.label);
+      })
+      .map((item) => item.label);
+  }, [myListing]);
+
+  const myPreviewWantedLayouts = useMemo(
+    () => orderLayoutsByOccupancy(myListing?.wantedLayoutStyles || []),
+    [myListing]
+  );
+
   function openExpandedListing(listingId) {
     setExpandedId(listingId);
   }
@@ -290,16 +355,16 @@ export default function BrowsePage() {
                   {(myListing.wantedGenders || []).length > 0 && (
                     <div className="looking-val">{myListing.wantedGenders.join(", ")}</div>
                   )}
-                  {(myListing.wantedCampusGroups || []).length > 0 && (
+                  {myPreviewWantedBuildings.length > 0 && (
                     <div className="looking-val looking-sub">
-                      {myListing.wantedCampusGroups.slice(0, 2).join(", ")}
-                      {myListing.wantedCampusGroups.length > 2 ? ` +${myListing.wantedCampusGroups.length - 2}` : ""}
+                      {myPreviewWantedBuildings.slice(0, 2).join(", ")}
+                      {myPreviewWantedBuildings.length > 2 ? ` +${myPreviewWantedBuildings.length - 2}` : ""}
                     </div>
                   )}
-                  {(myListing.wantedLayoutStyles || []).length > 0 && (
+                  {myPreviewWantedLayouts.length > 0 && (
                     <div className="looking-val looking-sub">
-                      {myListing.wantedLayoutStyles.slice(0, 2).join(", ")}
-                      {myListing.wantedLayoutStyles.length > 2 ? ` +${myListing.wantedLayoutStyles.length - 2}` : ""}
+                      {myPreviewWantedLayouts.slice(0, 2).join(", ")}
+                      {myPreviewWantedLayouts.length > 2 ? ` +${myPreviewWantedLayouts.length - 2}` : ""}
                     </div>
                   )}
                 </div>
@@ -762,7 +827,7 @@ export default function BrowsePage() {
       </div>
 
       {expandedListing ? <ExpandModal listing={expandedListing} myListing={myListing} onClose={() => setExpandedId("")} /> : null}
-      {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId)} contact={contactsMap[contactModalId]} onClose={() => setContactModalId("")} /> : null}
+      {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId) || listings.find(l => l.id === contactModalId)} contact={contactsMap[contactModalId]} myListing={myListing} onClose={() => setContactModalId("")} /> : null}
     </div>
   );
 }
