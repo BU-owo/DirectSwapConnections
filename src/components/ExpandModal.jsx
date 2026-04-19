@@ -29,6 +29,9 @@ export default function ExpandModal({ listing, myListing, onClose }) {
   const myBuilding = myListing?.currentBuilding || "";
   const myHousingGender = myListing?.housingGender || "";
   const wantedGenders = listing.wantedGenders || [];
+  const currentLocation = NAMED_BUILDING_GROUPS.has(listing.currentCampusGroup)
+    ? listing.currentBuilding || listing.currentCampusGroup || "-"
+    : listing.currentCampusGroup || listing.currentBuilding || "-";
 
   const collator = useMemo(
     () => new Intl.Collator("en", { numeric: true, sensitivity: "base" }),
@@ -130,7 +133,7 @@ export default function ExpandModal({ listing, myListing, onClose }) {
     <div className="expand-modal-overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="expand-modal" role="dialog" aria-modal="true" aria-label="Listing details">
         <button className="modal-close" onClick={onClose}>x</button>
-        <h3>{listing.layout || "-"} - {listing.currentCampusGroup || "-"}</h3>
+        <h3>{listing.layout || "-"} - {currentLocation}</h3>
         <div className="modal-details" style={{ marginBottom: 12 }}>
           <strong>Housing gender:</strong> {listing.housingGender || "-"}<br />
           <strong>Bringing roommate:</strong> {listing.bringingRoommate ? `Yes${listing.totalPeople ? ` (${listing.totalPeople} total)` : ""}` : "No"}
