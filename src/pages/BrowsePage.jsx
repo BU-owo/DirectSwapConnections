@@ -123,9 +123,28 @@ function orderLayoutsByOccupancy(layouts) {
   });
 }
 
+function getListingBuildingSortMeta(listing, buildingGroupByName) {
+  const inNamedBuildingGroup = NAMED_BUILDING_GROUPS.has(listing.currentCampusGroup);
+  const label = inNamedBuildingGroup
+    ? (listing.currentBuilding || listing.currentCampusGroup || "")
+    : (listing.currentCampusGroup || listing.currentBuilding || "");
+  const groupName = inNamedBuildingGroup
+    ? (buildingGroupByName.get(listing.currentBuilding) || listing.currentCampusGroup || "")
+    : (listing.currentCampusGroup || buildingGroupByName.get(listing.currentBuilding) || "");
+  const tone = buildingToneForGroup(groupName);
+  return {
+    label,
+    typeRank: BUILDING_TYPE_ORDER[tone] ?? BUILDING_TYPE_ORDER["tone-generic"],
+  };
+}
+
 export default function BrowsePage() {
   const { listings, user, contactsMap, myListing } = useAppContext();
   const canViewContacts = Boolean(myListing);
+  const buildingGroupByName = useMemo(
+    () => new Map(BUILDINGS.map((building) => [building.name, building.group])),
+    []
+  );
   const [expandedId, setExpandedId] = useState("");
   const [contactModalId, setContactModalId] = useState("");
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
@@ -233,11 +252,20 @@ export default function BrowsePage() {
     } else if (filters.sort === "oldest") {
       next = [...next].sort((a, b) => toMs(a.submittedAt ?? a.updatedAt) - toMs(b.submittedAt ?? b.updatedAt));
     } else {
-      next = [...next].sort((a, b) => collator.compare(a.currentBuilding || "", b.currentBuilding || ""));
+      next = [...next].sort((a, b) => {
+        const aMeta = getListingBuildingSortMeta(a, buildingGroupByName);
+        const bMeta = getListingBuildingSortMeta(b, buildingGroupByName);
+        if (aMeta.typeRank !== bMeta.typeRank) return aMeta.typeRank - bMeta.typeRank;
+
+        const labelComparison = collator.compare(aMeta.label, bMeta.label);
+        if (labelComparison !== 0) return labelComparison;
+
+        return toMs(b.submittedAt ?? b.updatedAt) - toMs(a.submittedAt ?? a.updatedAt);
+      });
     }
 
     return next;
-  }, [filters, listings, user]);
+  }, [buildingGroupByName, filters, listings, user]);
 
   const totalListings = listings.filter((item) => item.id !== user?.uid).length;
   const hasAnyFilter =
@@ -284,6 +312,15 @@ export default function BrowsePage() {
     () => orderLayoutsByOccupancy(myListing?.wantedLayoutStyles || []),
     [myListing]
   );
+
+  const myLocationTone = useMemo(() => {
+    if (!myListing) return "tone-generic";
+    const groupName =
+      [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, "Student Village"].includes(myListing.currentCampusGroup)
+        ? (buildingGroupByName.get(myListing.currentBuilding) || myListing.currentCampusGroup)
+        : (myListing.currentCampusGroup || buildingGroupByName.get(myListing.currentBuilding));
+    return buildingToneForGroup(groupName);
+  }, [buildingGroupByName, myListing]);
 
   function openExpandedListing(listingId) {
     setExpandedId(listingId);
@@ -332,7 +369,7 @@ export default function BrowsePage() {
             </div>
             <div className="my-preview-row">
               <div className="listing-row-area">
-                <span className="badge badge-red">{myLocation}</span>
+                <span className={`badge building-badge ${myLocationTone}`}>{myLocation}</span>
               </div>
               <div className="listing-row-info">
                 <div className="info-details">
@@ -715,7 +752,7 @@ export default function BrowsePage() {
             <select value={filters.sort} onChange={(event) => setFilters((prev) => ({ ...prev, sort: event.target.value }))}>
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
-              <option value="building">Building A-Z</option>
+              <option value="building">Building</option>
             </select>
           </div>
         </div>
@@ -755,11 +792,16 @@ export default function BrowsePage() {
                 : listing.currentCampusGroup || listing.currentBuilding || "-";
 
             const movingCount = listing.bringingRoommate ? Number(listing.totalPeople || 2) : 1;
+            const locationGroupName =
+              [LARGE_STYLE_RESIDENCES_GROUP, FENWAY_CAMPUS_GROUP, "Student Village"].includes(listing.currentCampusGroup)
+                ? (buildingGroupByName.get(listing.currentBuilding) || listing.currentCampusGroup)
+                : (listing.currentCampusGroup || buildingGroupByName.get(listing.currentBuilding));
+            const locationTone = buildingToneForGroup(locationGroupName);
 
             return (
               <div key={listing.id} className="listing-row" onClick={() => setExpandedId(listing.id)} style={{ cursor: "pointer" }}>
                 <div className="listing-row-area">
-                  <span className="badge badge-red">{cardPrimaryLocation}</span>
+                  <span className={`badge building-badge ${locationTone}`}>{cardPrimaryLocation}</span>
                 </div>
                 <div className="listing-row-info">
                   <div className="info-details">
@@ -784,9 +826,7 @@ export default function BrowsePage() {
                       <div className="pitch-details">{listing.otherDetails}</div>
                     )}
                   </div>
-                  {(listing.pitch && listing.pitch.length > 100) || (listing.otherDetails && listing.otherDetails.length > 50) ? (
-                    <button className="row-expand-btn" onClick={() => setExpandedId(listing.id)}>Read more</button>
-                  ) : null}
+                  <button className="row-expand-btn row-expand-btn-subtle" onClick={(e) => { e.stopPropagation(); setExpandedId(listing.id); }}>Read more</button>
                 </div>
                 <div className="listing-row-looking">
                   <div className="looking-summary">
