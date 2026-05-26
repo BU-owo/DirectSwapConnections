@@ -1,11 +1,23 @@
+/**
+ * Home Page
+ * Landing page with hero section, platform explanation, FAQs, and quick navigation to browse/submit.
+ * Shows conditional UI based on authentication state and whether user has existing listing.
+ */
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 
+/**
+ * HomePage Component - Main landing page
+ * Displays overview of platform functionality and guides users to sign in and submit/browse listings.
+ */
 export default function HomePage() {
+  // Get auth state and listing data from context
   const { user, myListing, signInWithGoogle } = useAppContext();
+  // Router hooks for navigation
   const navigate = useNavigate();
   const location = useLocation();
+  // Helper to determine button styling based on current page
   const ctaClass = (path) => (location.pathname === path ? "hero-cta-white" : "hero-cta-ghost");
 
   return (

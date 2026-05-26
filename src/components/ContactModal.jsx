@@ -1,3 +1,8 @@
+/**
+ * Contact Modal Component - Display contact info with compatibility matching
+ * Shows what the lister is looking for with an emphasis on reading matching criteria before contacting.
+ * Warns users that contacting outside of matching criteria wastes both parties' time.
+ */
 import React, { useMemo } from "react";
 import { BUILDINGS } from "../../js/housing-data.js";
 

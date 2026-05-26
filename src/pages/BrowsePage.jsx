@@ -1,9 +1,13 @@
 /**
- * Browse Page
- * Shows active listings with filter/search/sort controls and a signed-in user's listing preview.
+ * Browse Page - Listing Discovery & Browsing
+ * Shows all active listings with real-time filters (campus group, building, layout, roommate status).
+ * Features full-text search, sorting (newest/most relevant), and modal views for details and contact info.
+ * Displays current user's own listing as a preview at top for easy self-comparison while browsing.
+ * Implements compatibility matching to highlight which listings match user's own housing profile.
  */
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+// Modal components for viewing full listing details and contacting users
 import ExpandModal from "../components/ExpandModal";
 import ContactModal from "../components/ContactModal";
 import { useAppContext } from "../context/AppContext";

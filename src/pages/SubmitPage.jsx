@@ -1,6 +1,10 @@
 /**
- * Submit Page
- * Collects current housing + preferences, validates constraints, and saves listing/contact data.
+ * Submit Page - Listing Creation & Editing
+ * Collects user's current housing info + preferences, validates constraints, and saves listing/contact data.
+ * Implements progressive form disclosure (campus group → building → layout) to guide users.
+ * Enforces gender matching rules and validates that selected preferences match housing assignment.
+ * Shows either "Submit Listing" mode (new) or "Update Listing" mode (existing) based on state.
+ * Separate delete button appears only when user has existing listing.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import {
