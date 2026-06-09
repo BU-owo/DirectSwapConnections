@@ -111,7 +111,7 @@ export default function HomePage() {
             <h3 className="home-sub-title">⚠️ Disclaimer</h3>
             <p>
               This site is <strong>not affiliated with or endorsed by Boston University.</strong>{" "}
-              It is an independent, community-made tool built to help BU students find each other.
+              It is an independent, community-made, partially vibe coded tool built to help BU students find each other.
               All listing information is self-reported and unverified. Please use common sense
               when connecting with others.
             </p>

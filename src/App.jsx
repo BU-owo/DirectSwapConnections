@@ -173,7 +173,7 @@ function Layout() {
 
       <footer>
         <div className="footer-disclaimer">
-          <strong>Disclaimer:</strong> Not affiliated with or endorsed by Boston University. This is an independent, community-made tool. Use at your own discretion. Listing info is submitted by students and has not been verified. Please exercise caution and common sense when connecting with others and arranging swaps.
+          <strong>Disclaimer:</strong> Not affiliated with or endorsed by Boston University. This is an independent, community-made, partially vibe coded tool. Use at your own discretion. Listing info is submitted by students and has not been verified. Please exercise caution and common sense when connecting with others and arranging swaps.
         </div>
         <div className="footer-contact">
           <strong>Questions or issues?</strong> Email <a href="mailto:directswapconnections@gmail.com">directswapconnections@gmail.com</a> about Terrier Housing
