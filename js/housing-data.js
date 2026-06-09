@@ -1,3 +1,10 @@
+/**
+ * Housing Data & Helpers
+ * Auto-generated building data from BU housing CSV with utility functions for filtering and lookup.
+ * Defines all buildings, campus groups, layouts, and provides filtering/querying functions.
+ * Supports hierarchical filtering: buildings organized by campus group → area → address → layouts available.
+ * Used throughout app for form population, validation, and display logic.
+ */
 // Auto-generated from BU housing CSV data
 
 export const housingData = [

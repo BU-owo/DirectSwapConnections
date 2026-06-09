@@ -1,3 +1,9 @@
+/**
+ * UI Rendering & Form Management
+ * Manages form field population, dynamic filtering, progressive disclosure, and table rendering.
+ * Includes dropdown population, search/filter logic, form state management, and rendering callbacks.
+ * Handles complex cascading filters where parent selections control available options (campus group → building → layout).
+ */
 import {
   CAMPUS_GROUPS,
   BUILDINGS_BY_GROUP,
@@ -15,8 +21,11 @@ import { state } from "./state.js";
 import { $, show, hide, esc, setErr, setMsg, getChecked } from "./dom.js";
 import { buildRow, showExpandModal } from "./table-formatter.js";
 
+// Callback functions for form events - set via setUiCallbacks()
 let callbacks = {
+  // Called when user interacts with form before signing in
   onRequireSignIn: () => {},
+  // Called when filter selections change to trigger table re-render
   onFiltersChanged: () => {},
 };
 

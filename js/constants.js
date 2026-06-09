@@ -1,3 +1,13 @@
+/**
+ * Application Constants
+ * Defines BU housing-related constants used throughout the app for filtering, validation, and form rendering.
+ */
+
+/**
+ * List of all BU residence halls by name.
+ * Used for building selection dropdowns and filtering results.
+ * @type {string[]}
+ */
 export const BUILDINGS = [
   "Warren Towers",
   "West Campus (Claflin, Rich, or Sleeper Hall)",
@@ -20,6 +30,21 @@ export const BUILDINGS = [
   "Fenway Longwood House",
 ];
 
+/**
+ * Room type categories - describes the housing style/structure.
+ * @type {string[]}
+ */
 export const ROOM_TYPES = ["Dorm", "Dorm Suite", "Apartment Suite", "Apartment"];
+
+/**
+ * Occupancy sizes - number of people in the room.
+ * @type {string[]}
+ */
 export const OCCUPANCIES = ["Single", "Double", "Triple", "Quad", "Studio"];
+
+/**
+ * Gender housing assignment categories.
+ * Used to enforce gender-specific housing matching rules.
+ * @type {string[]}
+ */
 export const GENDERS = ["Male", "Female", "Gender Neutral"];
