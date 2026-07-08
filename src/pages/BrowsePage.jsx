@@ -272,6 +272,14 @@ export default function BrowsePage() {
   }, [buildingGroupByName, filters, listings, user]);
 
   const totalListings = listings.filter((item) => item.id !== user?.uid).length;
+
+  const displayedListings = useMemo(() => {
+    if (myListing) return filteredListings;
+    return [...filteredListings]
+      .sort((a, b) => toMs(b.submittedAt ?? b.updatedAt) - toMs(a.submittedAt ?? a.updatedAt))
+      .slice(0, 5);
+  }, [filteredListings, myListing]);
+
   const hasAnyFilter =
     filters.search ||
     filters.gender.length ||
@@ -784,7 +792,7 @@ export default function BrowsePage() {
             </p>
           </div>
         ) : (
-          filteredListings.map((listing) => {
+          displayedListings.map((listing) => {
             const contact = contactsMap[listing.id] || {};
             const date = listing.submittedAt?.toDate
               ? listing.submittedAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -869,6 +877,15 @@ export default function BrowsePage() {
           })
         )}
       </div>
+
+      {!myListing && filteredListings.length > 0 && (
+        <div className="notice-bar" style={{ marginTop: "1rem" }}>
+          <strong>Submit your own listing to see all {totalListings} available listing{totalListings === 1 ? "" : "s"}.</strong>
+          <button className="btn-notice" onClick={() => navigate("/submit")}>
+            Submit your listing
+          </button>
+        </div>
+      )}
 
       {expandedListing ? <ExpandModal listing={expandedListing} myListing={myListing} onClose={() => setExpandedId("")} /> : null}
       {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId) || listings.find(l => l.id === contactModalId)} contact={contactsMap[contactModalId]} myListing={myListing} onClose={() => setContactModalId("")} /> : null}

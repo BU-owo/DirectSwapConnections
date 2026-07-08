@@ -26,12 +26,11 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
                             && request.auth.uid == userId;
     }
-  }
-}
-// Housing Photo Submissions — anyone can submit, no read/update/delete from clients
+
+    // Housing Photo Submissions — anyone can submit, only @bu.edu users can read
     match /housingSubmissions/{submissionId} {
       allow read: if request.auth != null
-            && request.auth.token.email.matches(".*@bu\\.edu");
+                  && request.auth.token.email.matches(".*@bu\\.edu");
       allow update, delete: if false;
 
       allow create: if request.resource.data.keys().hasAll(
@@ -45,3 +44,5 @@ service cloud.firestore {
                     && request.resource.data.photos.size() > 0
                     && request.resource.data.photos.size() <= 20;
     }
+  }
+}

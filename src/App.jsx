@@ -9,6 +9,8 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import BrowsePage from "./pages/BrowsePage";
 import HomePage from "./pages/HomePage";
 import SubmitPage from "./pages/SubmitPage";
+import AdminPhotosPage from "./pages/AdminPhotosPage";
+import SubmitPhotosPage from "./pages/SubmitPhotosPage";
 
 /**
  * Layout Component - Renders navigation, routes, and footer
@@ -154,6 +156,12 @@ function Layout() {
             >
               Browse Listings
             </NavLink>
+            <NavLink
+              to="/submit-photos"
+              className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
+            >
+              Submit Photos
+            </NavLink>
           </div>
 
           {/* Authentication section - shows different content based on login state */}
@@ -258,6 +266,8 @@ function Layout() {
 
           {/* Submit/edit listing page route */}
           <Route path="/submit" element={<SubmitPage />} />
+          <Route path="/submit-photos" element={<SubmitPhotosPage />} />
+          <Route path="/admin-photos" element={<AdminPhotosPage />} />
 
           {/* Catch-all for undefined routes - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
