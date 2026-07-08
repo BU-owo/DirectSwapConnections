@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /housing-photos/{campusGroup}/{address}/{layout}/{fileName} {
+  allow read: if request.auth != null
+              && request.auth.token.email.matches(".*@bu\\.edu");
+  allow write: if request.resource.size < 10 * 1024 * 1024
+               && request.resource.contentType.matches('image/.*');
+}
+  }
+}
