@@ -354,7 +354,9 @@ export default function BrowsePage() {
         <div className="panel-top">
           <div>
             <h2 className="panel-title">Active Swap Listings</h2>
-            <p className="result-count">Login with BU email to unlock listings and search filters.</p>
+            <p className="result-count">
+              {listings.length} listing{listings.length === 1 ? "" : "s"} — sign in to view details and contact info.
+            </p>
           </div>
         </div>
       </div>

@@ -73,8 +73,8 @@ export function AppProvider({ children }) {
    * Only fetches listings for authenticated users to respect privacy settings.
    */
   useEffect(() => {
-    // Skip if Firebase DB not initialized or user not signed in
-    if (!db || !user) {
+    // Skip if Firebase DB not initialized
+    if (!db) {
       setListings([]);
       return () => {};
     }
@@ -99,9 +99,9 @@ export function AppProvider({ children }) {
       }
     );
 
-    // Clean up listener on component unmount or user change
+    // Clean up listener on component unmount
     return () => unsub();
-  }, [user]);
+  }, []);
 
   // ─── Contact Information Loader ───────────────────────────────────────────────
 
