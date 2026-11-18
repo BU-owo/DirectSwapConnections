@@ -11,6 +11,7 @@ import HomePage from "./pages/HomePage";
 import SubmitPage from "./pages/SubmitPage";
 import AdminPhotosPage from "./pages/AdminPhotosPage";
 import SubmitPhotosPage from "./pages/SubmitPhotosPage";
+import SimulatorPage from "./pages/SimulatorPage";
 
 /**
  * Layout Component - Renders navigation, routes, and footer
@@ -30,6 +31,8 @@ function Layout() {
 
   // Determine current page for conditional rendering
   const isHome = location.pathname === "/";
+  // The simulator is its own mini-site with a compact banner of its own: no swap hero there
+  const isSimulator = location.pathname === "/simulator";
   const isSubmitPage = location.pathname === "/submit";
   const isBrowsePage = location.pathname === "/browse";
 
@@ -162,6 +165,12 @@ function Layout() {
             >
               Submit Photos
             </NavLink>
+            <NavLink
+              to="/simulator"
+              className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
+            >
+              Selection Simulator
+            </NavLink>
           </div>
 
           {/* Authentication section - shows different content based on login state */}
@@ -222,8 +231,8 @@ function Layout() {
         </div>
       </nav>
 
-      {/* ─── Hero Section (shown on all pages except home) ────────────────────── */}
-      {!isHome && (
+      {/* ─── Hero Section (shown on all pages except home and the simulator) ──── */}
+      {!isHome && !isSimulator && (
         <div className="hero">
           {/* Section heading */}
           <h1>BU Housing<br /><em>Direct Swaps</em></h1>
@@ -250,10 +259,10 @@ function Layout() {
       )}
 
       {/* Firebase config error on home page */}
-      {isHome && firebaseConfigError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{firebaseConfigError}</div> : null}
+      {(isHome || isSimulator) && firebaseConfigError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{firebaseConfigError}</div> : null}
 
       {/* Auth error on home page */}
-      {isHome && authError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{authError}</div> : null}
+      {(isHome || isSimulator) && authError ? <div className="msg msg-error" style={{ margin: "12px auto", maxWidth: 600 }}>{authError}</div> : null}
 
       {/* ─── Main Content Area with Routes ──────────────────────────────────── */}
       <main className={isHome ? "main-home" : ""}>
@@ -268,6 +277,9 @@ function Layout() {
           <Route path="/submit" element={<SubmitPage />} />
           <Route path="/submit-photos" element={<SubmitPhotosPage />} />
           <Route path="/admin-photos" element={<AdminPhotosPage />} />
+
+          {/* Housing selection simulator (static data, client-side only) */}
+          <Route path="/simulator" element={<SimulatorPage />} />
 
           {/* Catch-all for undefined routes - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
