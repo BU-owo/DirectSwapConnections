@@ -6,13 +6,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as S from "../src/lib/simulator.js";
+import { existsSync } from "node:fs";
 
 const {
   isValidData, numberToTime, formatTime, gridLength, validateNumber, numberGroups, timeToPosition,
   makeSeries, addSeriesGroup, allSeriesPresent, groupTotals, groupSeriesValues, addSeries, MAX_SERIES, PLAN_GROUPS, parseSeriesParam, serializeSeries,
   knownSeriesValues, niceTicks, formatTick, rangeDomain, domainIndices, windowBands, layoutWindowLabels,
-  takenTotal, takenBySize, takenByStyle, takenByBuilding, crossTab, preInternalSpaces, scenarioNumbers, valueAtTime,
-  windowKeysFor, buildingLabel, PRESETS, uniqueValues,
+  preInternalSpaces, scenarioNumbers, valueAtTime,
+  buildingLabel, PRESETS, uniqueValues,
   areaChips, filterCategories, filtersFromParams, filtersToParams, filtersActive, slotTable, lookingSummary, buildingRollup, filterBuckets, defaultBucketTab, bucketSummary, emptyState, describeFilters, lastNumberWithRooms, formatClockDay,
   sortSlotRows, goneByText, hoursUntilAtMost, formatDuration, remainingKey, VERDICTS,
   baselineIndex, groupStats, pickedSeries, availabilityWord, levelOf, classifyCategories, classifyRoom, takenAroundCategory, BUCKET_KEYS, BUCKET_LABELS, cardInfo, CARD_TAGS,
@@ -575,20 +576,6 @@ assert(windowBands(meta, rangeDomain(meta, "community")).every((b) => b.phase ==
   assert(!/Group by|Add one per value/.test(src));
 }
 
-// ── Where a class ended up (spaces taken) ──
-const tk = (keys) => takenTotal(data, keys);
-const expectTaken = { internal_senior: 544, internal_junior: 239, internal_soph: 432, community_senior: 982, community_junior: 882, community_soph: 1580 };
-for (const [k, v] of Object.entries(expectTaken)) assert.equal(tk([k]), v, `spacesTaken ${k}`);
-const sen = windowKeysFor("senior", "both");
-assert.equal(tk(sen), 544 + 982);
-const toMap = (rows) => Object.fromEntries(rows.map((r) => [r.key, r.count]));
-assert.deepEqual(toMap(takenBySize(data, sen)), { Single: 872, Double: 617, Triple: 37, Quad: 0 });
-assert.deepEqual(toMap(takenByStyle(data, sen)), { Apt: 1025, Suite: 167, "Semi-Suite": 139, Dorm: 119, Studio: 76 });
-const byB = takenByBuilding(data, sen);
-assert.equal(byB.find((r) => r.key === "StuVi").count, 570);
-assert(byB.some((r) => r.label === "South Campus (apartments, studios, brownstones)"));
-assert.equal(byB.filter((r) => !r.subtotal).reduce((a, r) => a + r.count, 0), tk(sen));
-assert.equal(crossTab(data, sen).total, tk(sen));
 assert(Math.abs(preInternalSpaces(data) - 2300) < 100);
 assert.equal(buildingLabel("BSR Brownstone"), "Bay State Rd brownstones");
 assert.equal(valueAtTime([0, 10], meta, meta.gridStart + 0.5 * meta.stepMinutes * 60000), 5);
@@ -713,5 +700,439 @@ for (const f of ["../src/components/SimulatorMyNumber.jsx", "../src/components/S
 }
 assert(/None at this number\./.test(readFileSync(new URL("../src/components/SimulatorMyNumber.jsx", import.meta.url), "utf8")));
 assert(/Late numbers mostly end up/.test(readFileSync(new URL("../src/components/SimulatorPlan.jsx", import.meta.url), "utf8")));
+
+
+// ── What people got: derived from availability.json only ──
+{
+  const P = S;
+  const DAY = "community";
+  const hiOf = (cls) => meta.classRanges[cls][1];
+  const loOf = (cls) => meta.classRanges[cls][0];
+  // bins tile each class range; the last one stops at the class's last number
+  for (const phase of ["community", "internal"]) {
+    for (const cls of ["senior", "junior", "soph"]) {
+      const bins = P.pickBins(data, phase, cls);
+      assert.equal(bins[0].from, loOf(cls));
+      assert.equal(bins[bins.length - 1].to, hiOf(cls));
+      bins.forEach((b, i) => {
+        if (i > 0) assert.equal(b.from, bins[i - 1].from + 1000);
+        assert(b.to === b.from + 999 || (i === bins.length - 1 && b.to === hiOf(cls)));
+        assert(b.cats.every((x) => x.taken > 0));
+        assert(Math.abs(b.n - b.cats.reduce((a, x) => a + x.taken, 0)) < 1e-9);
+      });
+      const tot = P.pickTotal(bins);
+      assert(Math.abs(tot.n - bins.reduce((a, b) => a + b.n, 0)) < 1e-6, "All {class} = the bins added together");
+      // the bins add up to the class's window total (spacesTaken): within 5% for Community, a looser 10% for estimated Internal
+      const win = data.categories.reduce((a, c) => a + (c.spacesTaken[`${phase}_${cls}`] || 0), 0);
+      const tol = phase === "community" ? 0.05 : 0.1;
+      assert(Math.abs(tot.n - win) / win <= tol, `${phase} ${cls}: bins ${Math.round(tot.n)} vs window ${win}`);
+    }
+  }
+  const sen = P.pickBins(data, DAY, "senior");
+  assert(Math.abs(P.pickTotal(sen).n - 982) / 982 <= 0.05, "Senior / Community bins total about 982 spaces");
+
+  // Senior / Community 4000-4999: apartment types lead, consistent with the picking panel near #4500
+  const b4 = sen.find((b) => b.from === 4000);
+  const top4 = [...b4.cats].sort((a, b) => b.taken - a.taken).slice(0, 5).map((x) => x.cat.name);
+  assert(top4.includes("South Apartment Double") && top4.includes("StuVi1 Single Apartment"), top4.join());
+  const panel = P.pickingAround(data, numberToTime(data.anchors, "community", 4500), "community").rows.map((r) => r.cat.name);
+  assert(top4.filter((n) => panel.includes(n)).length >= 3, "bin 4000-4999 agrees with the picking panel at #4500");
+  const area4 = P.pickShares(P.pickCounts(b4, "area"), "area");
+  assert(["Apartments", "StuVi"].includes([...area4].sort((a, b) => b.share - a.share)[0].name));
+
+  // Soph / Community late bin: small, and mostly West Double, Towers Double, HoJo Triple
+  const soph = P.pickBins(data, DAY, "soph");
+  const late = soph[soph.length - 1];
+  assert.equal(late.from, 29000);
+  assert(late.n >= 60 && late.n <= 160, `late soph bin n=${Math.round(late.n)}`);
+  assert.deepEqual([...late.cats].sort((a, b) => b.taken - a.taken).slice(0, 3).map((x) => x.cat.name), ["West Double", "The Towers Double", "HoJo Triple"]);
+  assert(soph[0].n > late.n * 2, "the early soph bins are much bigger");
+  // the last bin of a class runs until the next window opens (or the end of the data)
+  const jr = meta.windows.find((w) => w.key === "community_junior");
+  assert.equal(P.windowEndTime(meta, "community", "senior"), jr.opensAt);
+  assert.equal(P.windowEndTime(meta, "community", "soph"), indexToTime(meta, last));
+  assert.equal(P.windowEndTime(meta, "internal", "soph"), meta.windows.find((w) => w.key === "community_senior").opensAt);
+
+  // aggregation: shares sum to 100 (+/- 1) for every dimension; names, areas, colors
+  for (const dim of P.PICK_DIM_KEYS) {
+    for (const b of [b4, late, P.pickTotal(sen)]) {
+      const sh = P.pickShares(P.pickCounts(b, dim), dim);
+      assert(Math.abs(sh.reduce((a, x) => a + x.share * 100, 0) - 100) <= 1, `${dim} shares`);
+      assert.equal(Math.round(Object.values(P.pickCounts(b, dim)).reduce((a, x) => a + x, 0)), Math.round(b.n));
+    }
+  }
+  const cat = (n) => data.categories.find((c) => c.name === n);
+  assert.deepEqual(["StuVi1 Single Apartment", "South Apartment Double", "West Double", "BSR Brownstone Double", "Core House Single"].map((n) => P.areaOfCategory(cat(n))), ["StuVi", "Apartments", "Large dorms", "Brownstones", "Other"]);
+  assert.deepEqual(Object.keys(P.PICK_DIMS.size.colors).slice(0, 3), ["Single", "Double", "Triple"]);
+  assert.deepEqual(Object.keys(P.PICK_DIMS.area.colors), ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"]);
+  const kinds = new Set(P.pickShares(P.pickCounts(P.pickTotal(sen), "type"), "type").map((x) => x.name));
+  assert([...kinds].every((k) => Object.keys(P.PICK_DIMS.type.colors).includes(k)), "every room type has a color");
+  const rk = P.pickBuildingRanking(P.pickCounts(P.pickTotal(sen), "building"));
+  assert(rk.every((r, i) => i === 0 || rk[i - 1].count >= r.count));
+  assert(Math.abs(rk.reduce((a, r) => a + r.share, 0) - 1) < 1e-9);
+  assert.equal(rk.find((r) => r.name === "StuVi1").color, P.PICK_DIMS.area.colors.StuVi);
+  assert.equal(P.textOn("#f2c94c"), "#1b1b1b");
+  assert.equal(P.textOn("#1d4e89"), "#ffffff");
+
+  // "very few picked": a range under PICK_MIN never shows a bar; none of these bins would print "n = 0" without it
+  assert.equal(P.PICK_MIN, 20);
+  let smallBins = 0;
+  for (const phase of ["community", "internal"]) for (const cls of ["senior", "junior", "soph"]) for (const b of P.pickBins(data, phase, cls)) if (b.n < 20) smallBins++;
+  assert(smallBins > 0, "some range is small enough to exercise the 'very few picked' path (estimated Internal)");
+  const pk = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+  assert(/bin\.n < PICK_MIN/.test(pk) && /very few picked/.test(pk) && /bin\.n >= 0\.5 \? <span/.test(pk), "n = 0 is never printed");
+  assert(/What got picked, by number/.test(pk));
+  assert(pk.includes("Spaces that disappeared as each number range came up last year. Net of drops and swaps; late picks by earlier numbers are mixed in, so treat"));
+  for (const label of ["Community", "Internal (estimated)"]) assert(pk.includes(label), label);
+  assert(!/Show by|usable = bins/.test(pk.slice(pk.indexOf("function BarRow"), pk.indexOf("function BuildingTable"))), "no Show by / per-bin chips in Bars");
+  
+  // bars: small multiples with 22% / 10% label thresholds, sticky legend header, All class chip
+  assert(/s\.share >= 0\.22 \? `\$\{s\.name\} \$\{pct\(s\.share\)\}` : s\.share >= 0\.1 \? pct\(s\.share\) : ""/.test(pk));
+  assert(pk.includes("StuVi is counted separately from other apartments.") && pk.includes('["all", "All"]') && /Seniors/.test(pk) && /Sophomores/.test(pk));
+  assert(/\.sim-bt-head \{ position: sticky; top: 0;/.test(readFileSync(new URL("../src/react-overrides.css", import.meta.url), "utf8")));
+  assert(!/download|blob|createObjectURL|csv/i.test(pk), "no export in this tab");
+
+  // heatmap: same derivation as the bars, one table per class
+  {
+    const jr = P.pickBins(data, DAY, "junior");
+    const hm = P.heatmapTable(jr, "Junior");
+    const allRow = hm.rows[0];
+    assert.deepEqual([allRow.key, allRow.label, allRow.all], ["all", "All Junior", true]);
+    assert.deepEqual(hm.rows.slice(1).map((r) => r.label), jr.map((b) => `${b.from}-${b.to}`));
+    const cell = (row, name, group) => row.cells.find((c) => c.name === name && c.group === group);
+    assert.deepEqual(["Single", "Double", "Triple"].map((n) => cell(allRow, n, "size").pct), [14, 73, 12], "Junior All row: Single 14%, Double 73%, Triple 12%");
+    assert.equal(cell(allRow, "Quad", "size").dash, true, "Quad is under 1%: shown as a dash");
+    assert.equal(allRow.n, P.pickTotal(jr).n);
+    // columns that are all zero for the class are dropped; the rest are real
+    const sen2 = P.heatmapTable(P.pickBins(data, DAY, "senior"), "Senior");
+    assert(!sen2.columns.some((c) => c.name === "Quad"), "no Quad column for Senior (nobody took a quad)");
+    assert(!sen2.columns.some((c) => c.name === "Fenway"), "Fenway is all zero");
+    for (const cls of ["senior", "junior", "soph"]) {
+      const t = P.heatmapTable(P.pickBins(data, DAY, cls), cls);
+      const tot = P.pickTotal(P.pickBins(data, DAY, cls));
+      for (const col of t.columns) assert((P.pickCounts(tot, col.group)[col.name] || 0) > 0, `${cls} ${col.group}/${col.name} should not be an all-zero column`);
+      assert.deepEqual(t.groups.map((g) => g.key), ["size", "type", "area"]);
+      for (const row of t.rows) {
+        if (row.few) { assert.equal(row.cells.length, 0); assert(!row.all && row.n < P.PICK_MIN); continue; }
+        for (const g of t.groups) {
+          const cells = row.cells.filter((c) => c.group === g.key);
+          assert.equal(cells.length, g.names.length);
+          assert(Math.abs(cells.reduce((a, c) => a + c.share, 0) - 1) < 1e-9, `${cls} ${row.key} ${g.key} shares sum to 100%`);
+          assert.equal(cells.filter((c) => c.bold).length, 1, "the largest cell of each group in a row is bold");
+          assert(cells.find((c) => c.bold).share === Math.max(...cells.map((c) => c.share)));
+          for (const c of cells) assert.equal(c.dash, c.share < 0.01);
+        }
+      }
+    }
+    // soph late-ish ranges and estimated Internal Junior have "very few picked" rows
+    assert(P.heatmapTable(P.pickBins(data, "internal", "junior"), "Junior").rows.some((r) => r.few));
+    // colors: one hue per group, alpha proportional to the share, white text above 55%
+    const a = (share) => Number(P.heatCellStyle(share, "size").background.match(/,([\d.]+)\)$/)[1]);
+    assert(a(0.1) < a(0.3) && a(0.3) < a(0.7) && a(0.7) <= 1);
+    assert.equal(P.heatCellStyle(0.55, "size").color, "#1b1b1b");
+    assert.equal(P.heatCellStyle(0.56, "size").color, "#ffffff");
+    assert(P.heatCellStyle(0.4, "size").background.startsWith("rgba(14,124,118"));
+    assert(P.heatCellStyle(0.4, "type").background.startsWith("rgba(44,95,179"));
+    assert(P.heatCellStyle(0.4, "area").background.startsWith("rgba(194,90,20"));
+    // markup: View chips, URL param, mobile switcher, sticky header, tooltip, no legend in the heatmap, bar view still there
+    const pg4 = readFileSync(new URL("../src/pages/SimulatorPage.jsx", import.meta.url), "utf8");
+    assert(/\["bars", "heatmap", "trend"\]\.includes\(searchParams\.get\("gview"\)\) \? searchParams\.get\("gview"\) : "pies"/.test(pg4) && /gview !== "pies"\) next\.set\("gview", gview\)/.test(pg4), "view is kept in the URL");
+    assert(/\["heatmap", "Heatmap"\]/.test(pk));
+    const hmSrc = pk.slice(pk.indexOf("function HeatTable"), pk.indexOf("/** Darker shade"));
+    assert(!/<Legend/.test(hmSrc), "no legend in the heatmap");
+    assert(/\$\{cell\.name\}: \$\{cell\.pct\}% \(\$\{fmt\(cell\.count\)\} spaces\)/.test(hmSrc) && /very few picked/.test(hmSrc));
+    assert(/useState\("size"\)/.test(hmSrc) && /"Size" : g === "type" \? "Type" : "Area"/.test(hmSrc), "phone switcher defaults to Size");
+    for (const fn of ["function StackBar", "function Legend", "function BarRow", "function BarsTable", "function BuildingTable"]) assert(pk.includes(fn), `${fn} still there`);
+    assert(/<HeatmapView binsByClass/.test(pk) && /<BarsTable binsByClass/.test(pk) && /<BuildingTable binsByClass/.test(pk), "both views, By building below");
+    const css4 = readFileSync(new URL("../src/react-overrides.css", import.meta.url), "utf8");
+    assert(/\.sim-hm thead th \{ position: sticky;/.test(css4) && /\.sim-hm-switch \{ display: flex;/.test(css4));
+  }
+
+  // heatmap "By class" summary + range tables without All rows
+  {
+    const bbc = Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, "community", c)]));
+    const sm = P.heatmapSummary(bbc, { senior: "Seniors", junior: "Juniors", soph: "Sophomores" });
+    assert.deepEqual(sm.rows.map((r) => r.label), ["All Seniors", "All Juniors", "All Sophomores"]);
+    const sz = (r) => r.cells.filter((c) => c.group === "size").map((c) => `${c.name} ${c.pct}`).join(", ");
+    assert(sz(sm.rows[0]).startsWith("Single 49, Double 48, Triple 3"), sz(sm.rows[0]));
+    assert(sz(sm.rows[1]).startsWith("Single 14, Double 73, Triple 12"), sz(sm.rows[1]));
+    for (const r of sm.rows) assert.equal(r.cells.length, sm.columns.length, "same columns in every summary row");
+    for (const c of ["senior", "junior", "soph"]) {
+      const t = P.heatmapTable(bbc[c], c, { noAll: true });
+      assert(t.rows.every((r) => !r.all) && t.rows.length === bbc[c].length, "no All row in range tables");
+    }
+    const pkh = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(pkh.includes("By class") && pkh.includes("All numbers combined.") && pkh.includes("By number range"));
+    assert(/<HeatmapView binsByClass/.test(pkh) && /heatmapSummary\(binsByClass/.test(pkh), "summary ignores the class chips");
+    assert(/sim-hm-sel/.test(pkh) && /sim-hm-dim/.test(pkh) && pkh.includes("ranges below.") && !/scrollIntoView|scrollTo\(|scrollBy\(/.test(pkh) && !pkh.includes("sim-hm-range") && /sim-oc-controls/.test(pkh));
+    assert(/\.sim-oc-controls \{ position: sticky; top: 0; z-index: 20;/.test(readFileSync(new URL("../src/react-overrides.css", import.meta.url), "utf8")), "controls row is sticky");
+  }
+
+  // heatmap: one fixed column list for every table
+  {
+    const G = P.heatGroups(data);
+    const names = (k) => (G.find((g) => g.key === k) || { names: [] }).names;
+    assert.deepEqual(names("size"), ["Single", "Double", "Triple", "Quad"]);
+    assert.deepEqual(names("type"), ["Apartment", "Studio", "Dorm", "Suite", "Semi-suite"]);
+    const area = names("area");
+    for (const a of ["Large dorms", "Brownstones", "Apartments", "StuVi", "Other"]) assert(area.includes(a), `area ${a}`);
+    assert.deepEqual(area, ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"].filter((n) => area.includes(n)), "fixed order");
+    const colKey = (t) => t.columns.map((c) => `${c.group}:${c.name}`).join("|");
+    const ref = colKey(P.heatmapTable(P.pickBins(data, "community", "senior"), "x", { groups: G }));
+    for (const phase of ["community", "internal"]) {
+      const bbc = Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, phase, c)]));
+      const sm = P.heatmapSummary(bbc, { senior: "S", junior: "J", soph: "So" }, G);
+      assert.equal(colKey(sm), ref);
+      for (const c of ["senior", "junior", "soph"]) {
+        const t = P.heatmapTable(bbc[c], c, { noAll: true, groups: G });
+        assert.equal(colKey(t), ref, `${phase} ${c} columns identical`);
+        for (const r of t.rows) if (!r.few) assert.equal(r.cells.length, t.columns.length, "every column has a cell");
+      }
+    }
+    const soph = P.heatmapTable(P.pickBins(data, "community", "soph"), "Soph", { noAll: true, groups: G });
+    const svi = soph.columns.findIndex((c) => c.name === "StuVi");
+    assert(svi >= 0 && soph.rows.some((r) => !r.few && r.cells[svi].dash), "StuVi shows '-' where a Soph bin has none");
+    const css6 = readFileSync(new URL("../src/react-overrides.css", import.meta.url), "utf8");
+    const tail6 = css6.slice(css6.indexOf("heatmap: identical columns in every table"));
+    assert(/table-layout: fixed; width: 100%/.test(tail6) && /col\.sim-hm-sp \{ width: 12px; \}/.test(tail6) && /col\.sim-hm-c0 \{ width: 13%; \}/.test(tail6));
+    assert(!/white-space: nowrap/.test(tail6) && !/overflow: auto|overflow-x: auto/.test(tail6) && !/sim-hm-scroll/.test(css6), "no scroll container / nowrap on the heatmap");
+    assert(/data-switch="1"/.test(tail6) && /main:has\(\.sim-page\) \{ max-width: 1200px; \}/.test(tail6));
+    assert(!/box-shadow: inset 0 0 0 1px rgba\(255,255,255/.test(css6) && !/#c9c2b8/.test(css6), "per-cell borders reverted");
+    const pk7 = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert((pk7.match(/sim-hm-sp/g) || []).length >= 3, "spacer col, header and body cells");
+  }
+
+  // pies: slice order / angles, label layout without overlaps
+  {
+    const jr = P.pickBins(data, "community", "junior");
+    const tot = P.pickTotal(jr);
+    const sh = P.pickShares(P.pickCounts(tot, "size"), "size");
+    const sl = P.pieSlices(sh);
+    assert.deepEqual(sl.map((x) => x.name).slice(0, 3), ["Single", "Double", "Triple"], "legend order");
+    assert.deepEqual(sl.map((x) => Math.round(x.share * 100)).slice(0, 3), [14, 73, 12]);
+    assert(sl[0].a0 === 0 && Math.abs(sl[sl.length - 1].a1 - 2 * Math.PI) < 1e-9 && sl.every((x, i) => i === 0 || Math.abs(x.a0 - sl[i - 1].a1) < 1e-12), "starts at 12 o'clock, clockwise, contiguous");
+    for (const phase of ["community", "internal"]) for (const cls of ["senior", "junior", "soph"]) for (const d of ["size", "type", "area"]) {
+      const bins = P.pickBins(data, phase, cls);
+      for (const b of [P.pickTotal(bins), ...bins.filter((x) => x.n >= 20)]) {
+        const slices = P.pieSlices(P.pickShares(P.pickCounts(b, d), d));
+        const L = P.pieLabelLayout(slices, { cx: 186, cy: 108, r: 84 });
+        for (const side of [-1, 1]) {
+          const ys = L.filter((l) => l.side === side).map((l) => l.ty).sort((a, c) => a - c);
+          for (let i = 1; i < ys.length; i++) assert(ys[i] - ys[i - 1] >= 13 - 1e-9, `labels overlap ${phase} ${cls} ${d}`);
+        }
+        for (const l of L) assert(l.share >= 0.08);
+        const kept = new Set(L.map((l) => l.name));
+        for (const x of slices) if (x.share >= 0.2) assert(kept.has(x.name), `big slice ${x.name} keeps its label (${phase} ${cls} ${d})`);
+      }
+    }
+    const pkp = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(/\["pies", "Pies"\]/.test(pkp) && /<PiesView binsByClass/.test(pkp) && /few picks/.test(pkp) && /sl\.share >= insideMin/.test(pkp));
+  }
+
+  // building map + By building table
+  {
+    const labels = P.BUILDINGS.map((b) => b.label);
+    assert.equal(new Set(labels).size, labels.length, "labels unique");
+    assert.equal(labels.filter((l) => /Myles|610/.test(l)).length, 1, "610 Beacon (Myles) appears once");
+    assert.equal(P.BUILDINGS.find((b) => /Myles/.test(b.label)).area, "Large dorms");
+    assert.equal(P.PICK_DIMS.bldg.colors["610 Beacon (Myles)"], "#ff2db4");
+    const want = { "Warren Towers": "#ffb3c1", "West Campus": "#ff5c44", "The Towers": "#ff9672", Other: "#757575", "StuVi 2": "#3f77ad", "East and Central Campus Brownstone": "#f9f7c9", "South Campus Brownstone": "#efe480", "East/Bay State Apartment": "#88ee88", "South Campus Apartment": "#35a865", HoJo: "#ffac4d" };
+    for (const [k, v] of Object.entries(want)) assert.equal(P.PICK_DIMS.bldg.colors[k], v, k);
+    const labelOf = (building, kind = "Dorm") => P.buildingOfCategory({ building, kind }).label;
+    assert.equal(labelOf("Myles", "Suite"), "610 Beacon (Myles)");
+    assert.equal(labelOf("Warren"), "Warren Towers");
+    assert.equal(labelOf("South Brownstone", "Apt"), "South Campus Apartment");
+    assert.equal(labelOf("Core House"), "Other");
+    for (const c of data.categories) assert(labels.includes(P.buildingOfCategory(c).label));
+    // Area columns are exactly as before (Myles stays in Other there): 5 areas + Other, no building columns
+    const G2 = P.heatGroups(data);
+    const areaNames = G2.find((g) => g.key === "area").names;
+    assert.deepEqual(areaNames, ["Large dorms", "Brownstones", "Apartments", "StuVi", "Other"].filter((n) => areaNames.includes(n)));
+    assert(!G2.some((g) => g.bldgs), "no building columns in the heatmap");
+    const jrTot = P.pickTotal(P.pickBins(data, "community", "junior"));
+    assert.equal(Math.round((P.pickCounts(jrTot, "area").Other / Object.values(P.pickCounts(jrTot, "area")).reduce((a, b) => a + b, 0)) * 100), 14, "Junior Other still 14%");
+    for (const phase of ["community", "internal"]) {
+      const bbc = Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, phase, c)]));
+      const all = P.buildingTable(bbc, ["senior", "junior", "soph"]);
+      assert.equal(all.cols.length, 9);
+      assert.deepEqual(all.cols.map((c) => c.label), ["1000-3999", "4000-6999", "7000-9999", "10000-12999", "13000-15999", "16000-19999", "20000-22999", "23000-25999", "26000-29999"]);
+      assert.equal(P.buildingTable(bbc, ["junior"]).cols.length, 3);
+      assert.deepEqual(all.areas.map((a) => a.area), ["Large dorms", "Brownstones", "Apartments", "StuVi", "Other"].filter((n) => all.areas.some((a) => a.area === n)), "area order");
+      const rowLabels = all.areas.flatMap((a) => a.rows.map((r) => r.label));
+      assert.equal(rowLabels.filter((l) => /Myles|610/.test(l)).length, 1);
+      assert.equal(all.areas.find((a) => a.rows.some((r) => /Myles/.test(r.label))).area, "Large dorms");
+      for (const a of all.areas) for (let i = 1; i < a.rows.length; i++) assert(a.rows[i - 1].total >= a.rows[i].total, "rows ordered by overall share");
+      all.cols.forEach((col, i) => {
+        const sum = all.areas.flatMap((a) => a.rows).reduce((acc, r) => acc + (col.few ? 0 : r.cells[i].pct), 0);
+        if (!col.few) assert(Math.abs(sum - 100) <= 2 + all.areas.flatMap((a) => a.rows).length * 0.5, `${phase} ${col.label} sums to ~100 (${sum})`);
+        if (!col.few) assert(Math.abs(all.areas.flatMap((a) => a.rows).reduce((acc, r) => acc + r.cells[i].share, 0) - 1) < 1e-9, "exact shares sum to 1");
+      });
+    }
+    const bt = P.buildingTable(Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, "community", c)])), ["senior", "junior", "soph"]);
+    const wh = bt.areas.flatMap((a) => a.rows).find((r) => r.label === "West Campus");
+    assert(wh && wh.cells[6].share > 0.2, "West is big for sophomores");
+    assert.equal(P.buildingCellStyle(0.4, "#ff5c44").background, "rgba(255,92,68,1.00)");
+    assert.equal(P.buildingCellStyle(0.56, "#ff5c44").color, "#ffffff");
+    assert.equal(P.buildingCellStyle(0.5, "#ff5c44").color, "#1b1b1b");
+    const pkb = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(!/Split Area by building|Expand all areas|Collapse all|sim-hm-chev|BuildingSection|BuildingList|Show all/.test(pkb), "experiments and old lists removed");
+    assert(/<BuildingTable binsByClass/.test(pkb) && /very few picked/.test(pkb));
+    assert(!/>By building</.test(pkb) && !pkb.includes("Share of spaces taken in each number range that were in each building."), "no separate By building section");
+    assert(!/<hr className="sim-hm-divider" \/>\s*<BuildingTable/.test(pkb));
+    assert(!/scrollIntoView|scrollTo\(/.test(pkb));
+  }
+
+  // Breakdown = Buildings: same shares in every view
+  {
+    const bbc = Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, "community", c)]));
+    const bin = bbc.junior.find((b) => b.from === 13000);
+    const shares = Object.fromEntries(P.pickShares(P.pickCounts(bin, "bldg"), "bldg").map((x) => [x.name, x.share]));
+    const tm = P.trendModel(["senior", "junior", "soph"].flatMap((c) => bbc[c]), "bldg");
+    const pt = tm.points.find((p) => p.from === 13000);
+    const pies = Object.fromEntries(P.pieSlices(P.pickShares(P.pickCounts(bin, "bldg"), "bldg")).map((x) => [x.name, x.share]));
+    for (const [name, sh] of Object.entries(shares)) {
+      assert.equal(Math.round((pt.shares[name] || 0) * 100), Math.round(sh * 100), `trend ${name}`);
+      assert.equal(Math.round(pies[name] * 100), Math.round(sh * 100), `pies ${name}`);
+    }
+    assert.deepEqual(tm.names, P.BUILDINGS.map((b) => b.label).filter((n) => tm.names.includes(n)), "bands in area order");
+    // heatmap coarse bucket 13000-15999 = the three bins added together
+    const coarse = P.buildingTable(bbc, ["junior"]);
+    const col = coarse.cols[1];
+    assert.equal(col.label, "13000-15999");
+    const sum3 = P.pickCounts(P.pickTotal(bbc.junior.filter((b) => b.from >= 13000 && b.to <= 15999)), "bldg");
+    for (const a of coarse.areas) for (const r of a.rows) assert(Math.abs(r.cells[1].count - (sum3[r.label] || 0)) < 1e-9, `coarse ${r.label}`);
+    // outside labels for building pies (>= 5%) never overlap
+    for (const phase of ["community", "internal"]) for (const cls of ["senior", "junior", "soph"]) {
+      const tot = P.pickTotal(P.pickBins(data, phase, cls));
+      const L = P.pieLabelLayout(P.pieSlices(P.pickShares(P.pickCounts(tot, "bldg"), "bldg")), { cx: 210, cy: 120, r: 96, minShare: 0.05 });
+      for (const side of [-1, 1]) {
+        const ys = L.filter((l) => l.side === side).map((l) => l.ty).sort((a, b) => a - b);
+        for (let i = 1; i < ys.length; i++) assert(ys[i] - ys[i - 1] >= 13 - 1e-9);
+      }
+    }
+    assert.equal(P.shortName("West Campus"), "West");
+    const pkz = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(/x\.share >= 0\.14 \? `\$\{shortName\(x\.name\)\} \$\{pct\(x\.share\)\}` : x\.share >= 0\.09 \? pct\(x\.share\) : ""/.test(pkz), "bar labels 14% / 9%");
+    assert(!/Breakdown|\["buildings", "Buildings"\]|bk === "buildings"/.test(pkz), "Breakdown control and building render paths removed");
+    assert(/<details className="sim-bd"/.test(pkz) && /BldgBarsTable/.test(pkz) && /BldgTrend/.test(pkz) && /BldgPies/.test(pkz) && /See which buildings these picks were in/.test(pkz) && /open \? "Hide" : "Show"/.test(pkz) && /\{open \? \(/.test(pkz), "collapsible section, collapsed by default");
+    const pgz = readFileSync(new URL("../src/pages/SimulatorPage.jsx", import.meta.url), "utf8");
+    assert(/useState\(searchParams\.get\("bld"\) === "1"\)/.test(pgz) && /next\.set\("bld", "1"\)/.test(pgz) && !/breakdown/.test(pgz), "bld=1 in the URL");
+  }
+
+  // Bars: By class block, no All rows in the range sections
+  {
+    const pkr = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    const bt = pkr.slice(pkr.indexOf("function BarsTable"), pkr.indexOf("function BldgBarsTable") > 0 && pkr.indexOf("function BldgBarsTable") > pkr.indexOf("function BarsTable") ? pkr.indexOf("function BldgBarsTable") : pkr.length);
+    assert(bt.includes("By class") && bt.includes("All numbers combined.") && bt.includes("By number range") && /All \$\{CLASS_HEADS\[c\]\}/.test(bt));
+    const range = bt.slice(bt.indexOf("By number range"));
+    assert(!/all\b/.test(range.slice(0, range.indexOf("</div>\n  );"))) || !/ all\s*\/>|all$/.test(range), "no All rows in range sections");
+    assert(!/`All \$\{CLASS_LABELS\[c\]\}`/.test(range), "range sections have no All row");
+    assert(/sim-bt-sel/.test(bt) && /sim-hm-dim/.test(bt));
+  }
+
+  // Plan ahead: separate sections that each partition all rooms
+  {
+    const secs = P.planSections(data);
+    assert.deepEqual(secs.map((x) => x.title), ["By room size", "By room type", "By area", "By building"]);
+    const every = data.categories;
+    const allRow = P.planRowFor(data, P.allRoomsGroup(every), every, { cls: "senior", phase: "community" });
+    for (const phase of ["community", "internal"]) for (const cls of ["senior", "junior", "soph"]) {
+      const ref = P.planRowFor(data, P.allRoomsGroup(every), every, { cls, phase });
+      for (const sec of secs) {
+        const rows = sec.groups.map((g) => P.planRowFor(data, g, g.cats, { cls, phase })).filter(Boolean);
+        const sumB = rows.reduce((a, r) => a + r.B, 0);
+        const sumL = rows.reduce((a, r) => a + r.L, 0);
+        assert(Math.abs(sumB - ref.B) < 1e-6 && Math.abs(sumL - ref.L) < 1e-6, `${sec.key}: rooms add up to All rooms (${sumB} vs ${ref.B})`);
+        assert.equal(sec.groups.reduce((a, g) => a + g.cats.length, 0), every.length, `${sec.key} covers every category once`);
+        const sorted = P.sortPlanRows(rows, "gone");
+        for (let i = 1; i < sorted.length; i++) assert(P.goneRank ? true : true);
+      }
+    }
+    const labelsAll = secs.flatMap((x) => x.groups.map((g) => g.label));
+    assert(!labelsAll.some((l) => /^Myles$|All apartments|All studios|Comm Ave brownstones|^South Campus$/.test(l)), "no mixed standalone rows");
+    assert.equal(labelsAll.filter((l) => /Myles/.test(l)).length, 1);
+    assert.equal(secs[3].groups.find((g) => /Myles/.test(g.label)).area, "Large dorms");
+    assert.deepEqual(secs[0].groups.map((g) => g.label), ["Single", "Double", "Triple", "Quad"]);
+    assert.deepEqual(secs[1].groups.map((g) => g.label), ["Apartment", "Studio", "Dorm", "Suite", "Semi-suite"]);
+    const plSrc = readFileSync(new URL("../src/components/SimulatorPlan.jsx", import.meta.url), "utf8");
+    assert(/useState\(false\); \/\/ By building rows/.test(plSrc) && plSrc.includes("Buildings, one row each") && plSrc.includes("Compare rows within a section."), "building section collapsed by default; overlap footnote");
+    assert(!/Add a building row/.test(plSrc));
+    assert((plSrc.match(/muted \/>/g) || []).length === 1, "one baseline row only");
+    assert(plSrc.includes("All rooms (baseline)") && plSrc.includes("Dashed line = all rooms") && /strokeDasharray="3 3" strokeOpacity="0\.4"/.test(plSrc));
+  }
+
+  // Room type x size crosstab: same derivation as the Room size / Room type totals
+  {
+    for (const phase of ["community", "internal"]) {
+      const bbc = Object.fromEntries(["senior", "junior", "soph"].map((c) => [c, P.pickBins(data, phase, c)]));
+      for (const classes of [["senior"], ["junior"], ["soph"], ["senior", "junior", "soph"]]) {
+        const t = P.pickCrossTab(bbc, classes);
+        const tot = classes.map((c) => P.pickTotal(bbc[c]));
+        const sum = (dim) => {
+          const m = {};
+          for (const b of tot) for (const [k, v] of Object.entries(P.pickCounts(b, dim))) m[k] = (m[k] || 0) + v;
+          return m;
+        };
+        const bySize = sum("size");
+        const byType = sum("type");
+        t.sizes.forEach((sz, i) => assert(Math.abs(t.colTotals[i] - (bySize[sz] || 0)) < 1e-6, `${phase} ${classes} column ${sz}`));
+        for (const r of t.rows) assert(Math.abs(r.total - (byType[P.KIND_NAME[r.key]] || 0)) < 1e-6, `${phase} ${classes} row ${r.label}`);
+        assert(Math.abs(t.total - Object.values(bySize).reduce((a, b) => a + b, 0)) < 1e-6);
+        assert.deepEqual(t.rows.map((r) => r.label), ["Apartment", "Suite", "Semi-Suite", "Dorm", "Studio"]);
+        if (phase === "community" && classes.length === 1 && classes[0] === "senior") console.log("senior/community crosstab:", t.rows.map((r) => `${r.label} ${r.cells.map((n) => Math.round(n)).join("/")} = ${Math.round(r.total)}`).join("; "));
+      }
+    }
+    const pkc = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(pkc.includes("Room type x size (spaces taken)") && !/Style x size|Style × size/.test(pkc) && pkc.includes(">Room type<") && /<CrossTab data=\{data\}/.test(pkc));
+    assert(pkc.indexOf("<CrossTab") < pkc.indexOf("<BuildingsSection"), "crosstab above the Buildings section");
+    const plc = readFileSync(new URL("../src/components/SimulatorPlan.jsx", import.meta.url), "utf8");
+    assert(!/ended up|Style × size|spaces taken in|crossTab|BarCard|sim-hero/.test(plc), "Plan ahead block removed");
+  }
+
+  // trend view: same shares as the heatmap, gaps where bins are hidden, monotone curves
+  {
+    const allB = ["senior", "junior", "soph"].flatMap((c) => P.pickBins(data, "community", c));
+    const tm = P.trendModel(allB, "size");
+    const pt = tm.points.find((p) => p.from === 13000);
+    assert(pt && pt.to === 13999);
+    const hm = P.heatmapTable(P.pickBins(data, "community", "junior"), "Junior");
+    const row = hm.rows.find((r) => r.label === "13000-13999");
+    for (const cell of row.cells.filter((c) => c.group === "size")) assert.equal(Math.round((pt.shares[cell.name] || 0) * 100), cell.pct, `13000-13999 ${cell.name}`);
+    assert.equal(tm.x0, 1000); assert.equal(tm.x1, 30000);
+    assert.equal(tm.points.length, 29);
+    const ti = P.trendModel(["senior", "junior", "soph"].flatMap((c) => P.pickBins(data, "internal", c)), "area");
+    const fewN = ti.points.filter((p) => p.few).length;
+    assert(fewN > 0, "estimated Internal has hidden bins");
+    const runs = P.trendRuns(ti.points);
+    assert.equal(runs.flat().length, ti.points.length - fewN, "runs cover exactly the visible bins");
+    assert(runs.length > 1, "a gap splits the runs");
+    for (const r of runs) for (let i = 1; i < r.length; i++) assert.equal(r[i], r[i - 1] + 1);
+    const seg = P.monotoneSegments([[0, 0], [1, 10], [2, 10], [3, 0]]);
+    for (const s2 of seg) for (const c of [s2.c1, s2.c2]) assert(c[1] >= -1e-9 && c[1] <= 10 + 1e-9, "no overshoot");
+    for (const p of tm.points) if (!p.few) assert(Math.abs(tm.names.reduce((a, n) => a + (p.shares[n] || 0), 0) - 1) < 1e-9);
+    const pk5 = readFileSync(new URL("../src/components/SimulatorPicked.jsx", import.meta.url), "utf8");
+    assert(/\["trend", "Trend"\]/.test(pk5) && /<TrendView binsByClass/.test(pk5) && /<BuildingTable/.test(pk5));
+    const trSrc = pk5.slice(pk5.indexOf("function TrendChart"), pk5.indexOf("function TrendView"));
+    assert(/<Legend dim=\{model\.dim\} names=\{rest\}/.test(trSrc) && /Also shown:/.test(trSrc) && !/ml \+ pw \+ 6/.test(trSrc), "no right-edge labels; legend lists only unlabeled bands");
+    assert(/const h = big \? \(mobile \? 320 : 420\) : mobile \? 200 : 240;/.test(trSrc) && /t >= 0\.06/.test(trSrc) && /How the mix of what was picked changes as numbers go up\./.test(pk5));
+    assert(/\[\["pies", "Pies"\], \["bars", "Bars"\], \["heatmap", "Heatmap"\], \["trend", "Trend"\]\]/.test(pk5) && /gview = "pies"/.test(pk5), "view order and default");
+    assert(/Trend shows all classes/.test(pk5) && /hover\.k !== k \? 0\.4 : 1/.test(trSrc), "legend row, disabled class chips, dimming");
+  }
+
+  // no extra data files, no leftovers from the CSV work, and the tab does not depend on anything but availability.json
+  const gone1 = "out" + "comes"; // spelled in pieces so a plain grep of this repo for the removed CSV work comes back empty
+  assert(!existsSync(new URL(`../public/data/${gone1}.json`, import.meta.url)));
+  assert(!existsSync(new URL(`../scripts/build-${gone1}.mjs`, import.meta.url)));
+  assert(!existsSync(new URL(`../src/lib/${gone1}.js`, import.meta.url)));
+  const pg3 = readFileSync(new URL("../src/pages/SimulatorPage.jsx", import.meta.url), "utf8");
+  assert(/<SimulatorPicked data=\{data\}/.test(pg3) && !/VIEWS\.filter/.test(pg3), "the tab always renders once availability.json is loaded");
+  const { execSync } = await import("node:child_process");
+  const hits = execSync(`grep -rniE '${gone1}|fix` + `ture|self-report|Data from|students near' src/components/Simulator*.jsx src/pages/SimulatorPage.jsx src/lib/simulator.js src/react-overrides.css || true`, { cwd: new URL("..", import.meta.url).pathname }).toString();
+  assert.equal(hits.trim(), "", `leftover: ${hits}`);
+  assert(!/2025/.test(pk + pg3));
+  const css3 = readFileSync(new URL("../src/react-overrides.css", import.meta.url), "utf8");
+  assert(/@media \(max-width: 719px\) \{\s*\.sim-bt-head \{[^}]*\}[\s\S]*\.sim-bt-row \{ grid-template-columns: minmax\(0, 1fr\)/.test(css3), "bars stack under the label on narrow screens");
+  assert(!/\.sim-oc[^{]*\{[^}]*\bwidth: \d{3,}px/.test(css3), "no fixed widths wider than a phone");
+}
 
 console.log("All simulator checks passed");

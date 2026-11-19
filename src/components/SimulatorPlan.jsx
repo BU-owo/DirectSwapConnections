@@ -2,7 +2,7 @@
  * SimulatorPlan - the "Plan ahead" view of the Housing Selection Simulator, for people without a number yet.
  * Main table: one row per group of categories (sums before dividing) with a sparkline of picked rooms
  * remaining across numbers 1000-29999, five scenario cells for the chosen class, "half / mostly gone by"
- * numbers and the never-filled count. Below it: where the class's students ended up (spaces taken).
+ * numbers and the never-filled count.
  *
  * Definitions: locked = full before selection began (hidden); baseline B = open when selection began;
  * leftover L = never filled; picked C = B - L; picked remaining = max(0, open - L) / C.
@@ -12,31 +12,24 @@ import {
   CLASSES,
   CLASS_LABELS,
   PHASE_LABELS,
-  PLAN_GROUPS,
+  BUILDINGS,
+  allRoomsGroup,
+  planSections,
   PLAN_PHASES,
   PLAN_SORTS,
   SIZE_LIST,
-  buildingGroup,
   buildingLabel,
-  crossTab,
   groupStats,
   goneLabel,
   planRowFor,
-  preInternalSpaces,
   seriesCategories,
   sortPlanRows,
   styleLabel,
-  takenByBuilding,
-  takenBySize,
-  takenByStyle,
-  takenTotal,
   uniqueValues,
-  windowKeysFor,
 } from "../lib/simulator";
 
 const PLAN_LABELS = { ...PHASE_LABELS, both: "Both" };
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
-const pctText = (x) => `${(x * 100).toFixed(x > 0 && x < 0.1 ? 1 : 0)}%`;
 const pct0 = (x) => `${Math.round(x * 100)}%`;
 
 /** Multi-select chip filter. sel === null means "everything selected". */
@@ -49,7 +42,7 @@ function toggleIn(sel, all, v) {
 export default function SimulatorPlan({ data, cls, setCls, planPhase, setPlanPhase, onJump }) {
   const { meta } = data;
   const [sortBy, setSortBy] = useState("gone");
-  const [extraBuildings, setExtraBuildings] = useState([]);
+  const [showB, setShowB] = useState(false); // By building rows (collapsed by default)
   const [fStyle, setFStyle] = useState(null);
   const [fSize, setFSize] = useState(null);
   const [fArea, setFArea] = useState(null);
@@ -63,37 +56,40 @@ export default function SimulatorPlan({ data, cls, setCls, planPhase, setPlanPha
   // The table reads one phase's number axis; Community is used when Both is selected.
   const axisPhase = planPhase === "internal" ? "internal" : "community";
 
-  const groups = useMemo(() => [...PLAN_GROUPS, ...extraBuildings.map(buildingGroup)], [extraBuildings]);
-  const rows = useMemo(() => {
-    const out = [];
-    for (const g of groups) {
-      const cats = seriesCategories(data, g.series).filter(inFilter);
-      if (!cats.length) continue;
-      const row = planRowFor(data, g, cats, { cls, phase: axisPhase });
-      if (row) out.push(row);
-    }
-    return sortPlanRows(out, sortBy);
+  // Sections: size / type / area / building; each row is one group, sorted within its section.
+  const sections = useMemo(() => {
+    const secs = planSections(data);
+    const uni = data.categories.filter(inFilter);
+    const ref = uni.length ? planRowFor(data, allRoomsGroup(uni), uni, { cls, phase: axisPhase }) : null;
+    return {
+      ref,
+      list: secs.map((sec) => {
+        const rows = [];
+        for (const g of sec.groups) {
+          const cats = g.cats.filter(inFilter);
+          if (!cats.length) continue;
+          const row = planRowFor(data, { ...g, cats }, cats, { cls, phase: axisPhase });
+          if (row) rows.push(row);
+        }
+        if (sec.key === "bldg") {
+          // grouped under area headers (area order), sorted within each area
+          const order = [...new Set(BUILDINGS.map((b) => b.area))];
+          return { ...sec, rows: order.flatMap((a) => sortPlanRows(rows.filter((r) => r.group.area === a), sortBy)) };
+        }
+        return { ...sec, rows: sortPlanRows(rows, sortBy) };
+      }),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, groups, cls, axisPhase, sortBy, fStyle, fSize, fArea]);
+  }, [data, cls, axisPhase, sortBy, fStyle, fSize, fArea]);
+  const rows = sections.ref ? [sections.ref] : [];
   const columns = rows[0] ? rows[0].cells : [];
-  const buildingChoices = areas.filter((b) => !extraBuildings.includes(b));
+  const nCols = columns.length + 4; // group, sparkline, the checkpoint columns, three "gone" columns
 
   // Summary over the (filtered) categories
   const universe = useMemo(() => data.categories.filter(inFilter), [data, fStyle, fSize, fArea]); // eslint-disable-line react-hooks/exhaustive-deps
   const sum = groupStats(meta, universe);
   const all = groupStats(meta, data.categories);
   const totalRooms = all.rooms;
-
-  // Where the class ended up
-  const keys = windowKeysFor(cls, planPhase);
-  const total = takenTotal(data, keys);
-  const internalTotal = takenTotal(data, [`internal_${cls}`]);
-  const communityTotal = takenTotal(data, [`community_${cls}`]);
-  const bySize = useMemo(() => takenBySize(data, keys), [data, cls, planPhase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const byStyle = useMemo(() => takenByStyle(data, keys), [data, cls, planPhase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const byArea = useMemo(() => takenByBuilding(data, keys), [data, cls, planPhase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const cross = useMemo(() => crossTab(data, keys), [data, cls, planPhase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const preGone = preInternalSpaces(data);
 
   return (
     <div className="sim-plan">
@@ -185,46 +181,52 @@ export default function SimulatorPlan({ data, cls, setCls, planPhase, setPlanPha
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.group.series.id} className="sim-matrix-row" onClick={() => onJump(r.group.series)}>
-                  <th scope="row" className="sim-sticky">
-                    <button type="button" className="sim-rowbtn" onClick={(e) => { e.stopPropagation(); onJump(r.group.series); }} title="Explore this group over time">
-                      {r.group.label}
-                      <span className="sim-rowbtn-sub">{fmt(r.B)} rooms · explore →</span>
-                    </button>
-                  </th>
-                  <td className="sim-spark-cell"><Sparkline spark={r.spark} meta={meta} cls={cls} /></td>
-                  {r.cells.map((c) => (
-                    <td key={c.p} className={`sim-cell sim-cell-${c.key}`} title={`${fmt(c.count)} of ${fmt(r.C)} rooms that got picked were still open`}>
-                      <strong>{pct0(c.share)}</strong>
-                      <span className="sim-cell-word">{c.word}</span>
-                    </td>
-                  ))}
-                  <td className="sim-gone sim-gone-text">{goneLabel(r.half, meta, axisPhase)}</td>
-                  <td className="sim-gone sim-gone-text">{goneLabel(r.mostly, meta, axisPhase)}</td>
-                  <td className="sim-gone sim-never" title="Still open on 4/2. May be low demand or limited eligibility.">{fmt(r.L)}</td>
-                </tr>
-              ))}
+              {sections.ref ? <PlanRow r={sections.ref} meta={meta} cls={cls} axisPhase={axisPhase} onJump={onJump} muted /> : null}
+              {sections.list.map((sec) => {
+                const isB = sec.key === "bldg";
+                const open = !isB || showB;
+                return (
+                  <React.Fragment key={sec.key}>
+                    <tr className="sim-pl-sec">
+                      <th scope="colgroup" colSpan={nCols}>
+                        <strong>{sec.title}</strong>
+                        <span className="sim-pl-cap">{sec.caption}</span>
+                      </th>
+                    </tr>
+                    {isB ? (
+                      <tr className="sim-pl-disc">
+                        <td colSpan={nCols}>
+                          <button type="button" className="sim-pl-disc-btn" aria-expanded={showB} onClick={() => setShowB(!showB)}>
+                            <span className="sim-bd-chev" aria-hidden="true">{showB ? "▾" : "▸"}</span> Buildings, one row each
+                          </button>
+                        </td>
+                      </tr>
+                    ) : null}
+                    {open
+                      ? sec.rows.map((r, i) => (
+                          <React.Fragment key={r.group.series.id + r.group.label}>
+                            {isB && (i === 0 || sec.rows[i - 1].group.area !== r.group.area) ? (
+                              <tr className="sim-pl-area">
+                                <th scope="colgroup" colSpan={nCols} style={{ background: `${(BUILDINGS.find((b) => b.area === r.group.area) || {}).color || "#999999"}33` }}>
+                                  {r.group.area}
+                                </th>
+                              </tr>
+                            ) : null}
+                            <PlanRow r={r} meta={meta} cls={cls} axisPhase={axisPhase} onJump={onJump} base={sections.ref ? sections.ref.spark : null} />
+                          </React.Fragment>
+                        ))
+                      : null}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <div className="sim-plan-foot">
-        <label className="sr-only-label" htmlFor="sim-add-building">Add a building row</label>
-        <select
-          id="sim-add-building"
-          className="sim-select"
-          value=""
-          onChange={(e) => e.target.value && setExtraBuildings((b) => [...b, e.target.value])}
-        >
-          <option value="">Add a building row…</option>
-          {buildingChoices.map((b) => <option key={b} value={b}>{buildingLabel(b)}</option>)}
-        </select>
-        {extraBuildings.length ? (
-          <button type="button" className="btn-ghost-xs" onClick={() => setExtraBuildings([])}>Remove added rows</button>
-        ) : null}
-      </div>
+      <p className="sim-note sim-pl-overlap">
+        Rows in different sections overlap (for example, StuVi rooms are also apartments and singles). Compare rows within a section.
+      </p>
 
       <p className="sim-note sim-caption sim-caption-late">Late numbers mostly end up in the &lsquo;never filled&rsquo; rooms.</p>
       <p className="sim-note sim-caption">
@@ -235,59 +237,6 @@ export default function SimulatorPlan({ data, cls, setCls, planPhase, setPlanPha
         <span className="sim-word sim-cell-plenty">Plenty</span> 50%+ <span className="sim-word sim-cell-some">Some</span> 20-50%{" "}
         <span className="sim-word sim-cell-slim">Slim</span> 5-20% <span className="sim-word sim-cell-gone">Gone</span> under 5% of
         the rooms that got picked still open. Click a row to explore it over time.
-      </p>
-
-      {/* ── Where the class ended up ── */}
-      <h3 className="sim-h3">Where {CLASS_LABELS[cls].toLowerCase()} students ended up last year</h3>
-      <div className="sim-hero">
-        <div className="sim-hero-title">{fmt(total)} spaces taken</div>
-        <div>
-          in {CLASS_LABELS[cls]} windows
-          {planPhase === "both" ? (
-            <>: Internal <strong>{fmt(internalTotal)}</strong> + Community <strong>{fmt(communityTotal)}</strong></>
-          ) : (
-            <> ({PHASE_LABELS[planPhase]} only; the other phase added {fmt(planPhase === "internal" ? communityTotal : internalTotal)})</>
-          )}
-          .
-        </div>
-      </div>
-
-      <div className="sim-plan-grid">
-        <BarCard title="By room size" rows={bySize.map((r) => ({ ...r, label: r.key }))} />
-        <BarCard title="By style" rows={byStyle} />
-        <BarCard title="By area" rows={byArea} wide />
-      </div>
-
-      <h4 className="sim-h4">Style × size (spaces taken)</h4>
-      <div className="sim-scroll" tabIndex={0} role="region" aria-label="Style by size table, scrolls sideways">
-        <table className="sim-table sim-heat">
-          <thead>
-            <tr>
-              <th scope="col" className="sim-sticky">Style</th>
-              {cross.sizes.map((sz) => <th key={sz} scope="col">{sz}</th>)}
-              <th scope="col">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cross.styles.map((st) => (
-              <tr key={st.key}>
-                <th scope="row" className="sim-sticky">{st.label}</th>
-                {st.cells.map((n, i) => (
-                  <td key={cross.sizes[i]} style={{ background: n ? `rgba(163,31,35,${(0.08 + 0.42 * (n / cross.max)).toFixed(2)})` : undefined }}>
-                    {fmt(n)}
-                  </td>
-                ))}
-                <td className="sim-heat-total">{fmt(st.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="sim-note sim-caveat">
-        Counts are net spaces taken while {CLASS_LABELS[cls].toLowerCase()} windows were the latest to open. Windows stay open, so late
-        picks from earlier classes land in later windows. About {fmt(Math.round(preGone / 100) * 100)} spaces were already gone before
-        Internal began and are not attributed to any class.
       </p>
     </div>
   );
@@ -316,41 +265,47 @@ const SP_W = 132;
 const SP_H = 34;
 
 /** Inline SVG: picked remaining % across numbers 1000-29999, faint ticks at 10000 and 20000. */
-function Sparkline({ spark, meta, cls }) {
+function Sparkline({ spark, meta, cls, base = null }) {
   const x = (n) => 2 + ((n - 1000) / (29999 - 1000)) * (SP_W - 4);
   const y = (v) => 3 + (1 - v) * (SP_H - 6);
   const [lo, hi] = meta.classRanges[cls];
   const pts = spark.map((p) => `${x(p.n).toFixed(1)},${y(p.share).toFixed(1)}`).join(" ");
+  const basePts = base ? base.map((p) => `${x(p.n).toFixed(1)},${y(p.share).toFixed(1)}`).join(" ") : null;
   const at = (n) => spark.reduce((best, p) => (Math.abs(p.n - n) < Math.abs(best.n - n) ? p : best), spark[0]);
   const label = `Picked rooms still open: ${pct0(at(1000).share)} at #1000, ${pct0(at(10000).share)} at #10000, ${pct0(at(20000).share)} at #20000, ${pct0(at(29999).share)} at #29999`;
   return (
     <svg className="sim-spark" width={SP_W} height={SP_H} viewBox={`0 0 ${SP_W} ${SP_H}`} role="img" aria-label={label}>
+      {base ? <title>Dashed line = all rooms</title> : null}
       <rect x={x(lo)} y="1" width={Math.max(1, x(hi) - x(lo))} height={SP_H - 2} className="sim-spark-class" />
       <line x1={x(10000)} x2={x(10000)} y1="1" y2={SP_H - 1} className="sim-spark-tick" />
       <line x1={x(20000)} x2={x(20000)} y1="1" y2={SP_H - 1} className="sim-spark-tick" />
+      {basePts ? <polyline points={basePts} fill="none" className="sim-spark-base" strokeWidth="1" strokeDasharray="3 3" strokeOpacity="0.4" /> : null}
       <polyline points={pts} fill="none" stroke="#a31f23" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
 }
 
 /** Horizontal bars: width = share of all spaces taken, label shows % and count. */
-function BarCard({ title, rows, wide }) {
+/** One Plan ahead row (group label, sparkline, five checkpoints, half / mostly gone by, never filled). */
+function PlanRow({ r, meta, cls, axisPhase, onJump, muted = false, base = null }) {
   return (
-    <div className={`sim-plan-card ${wide ? "sim-plan-card-wide" : ""}`.trim()}>
-      <h4 className="sim-h4">{title}</h4>
-      <ul className="sim-hbars">
-        {rows.map((r) => (
-          <li key={r.key} className={`${r.child ? "sim-hbar-child" : ""} ${r.subtotal ? "sim-hbar-sub" : ""}`.trim()}>
-            <div className="sim-hbar-label">{r.label}</div>
-            <div className="sim-hbar-track" role="img" aria-label={`${r.label}: ${pctText(r.share)}, ${fmt(r.count)} spaces`}>
-              <div className="sim-hbar-fill" style={{ width: `${Math.min(100, r.share * 100)}%` }} />
-            </div>
-            <div className="sim-hbar-val">
-              <strong>{pctText(r.share)}</strong> <span>{fmt(r.count)}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <tr className={`sim-matrix-row ${muted ? "sim-pl-ref" : ""}`.trim()} onClick={() => onJump(r.group.series)}>
+      <th scope="row" className="sim-sticky">
+        <button type="button" className="sim-rowbtn" onClick={(e) => { e.stopPropagation(); onJump(r.group.series); }} title={`Explore ${r.group.label} over time`}>
+          {muted ? "All rooms (baseline)" : r.group.short || r.group.label}
+          <span className="sim-rowbtn-sub">{fmt(r.B)} rooms · explore →</span>
+        </button>
+      </th>
+      <td className="sim-spark-cell"><Sparkline spark={r.spark} meta={meta} cls={cls} base={muted ? null : base} /></td>
+      {r.cells.map((c) => (
+        <td key={c.p} className={`sim-cell sim-cell-${c.key}`} title={`${fmt(c.count)} of ${fmt(r.C)} rooms that got picked were still open`}>
+          <strong>{pct0(c.share)}</strong>
+          <span className="sim-cell-word">{c.word}</span>
+        </td>
+      ))}
+      <td className="sim-gone sim-gone-text">{goneLabel(r.half, meta, axisPhase)}</td>
+      <td className="sim-gone sim-gone-text">{goneLabel(r.mostly, meta, axisPhase)}</td>
+      <td className="sim-gone sim-never" title="Still open on 4/2. May be low demand or limited eligibility.">{fmt(r.L)}</td>
+    </tr>
   );
 }

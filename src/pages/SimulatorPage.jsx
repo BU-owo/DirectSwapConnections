@@ -4,11 +4,12 @@
  * was likely available at a slot) and Explore (availability over time for groups of categories).
  * Client-side only: fetches /data/availability.json at runtime; nothing is stored or sent anywhere.
  * Deep link: #/simulator?view=plan|number|explore&class=senior&phase=community&num=5018
- *   plan view: &plan=internal|community|both   filters (My number): &size=Single,Double&kind=Apt,Dorm&area=stuvi,brown&hide0=0   explore: &series=...&metric=...&shown=0
+ *   plan view: &plan=internal|community|both   filters (My number): &size=Single,Double&kind=Apt,Dorm&area=stuvi,brown&hide0=0   what people got: &pclass=senior|junior|soph (omit = All)&gview=bars|heatmap|trend (omit = Pies)&bld=1   explore: &series=...&metric=...&shown=0
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import SimulatorMyNumber from "../components/SimulatorMyNumber";
+import SimulatorPicked from "../components/SimulatorPicked";
 import SimulatorOverTime from "../components/SimulatorOverTime";
 import SimulatorPlan from "../components/SimulatorPlan";
 import {
@@ -38,6 +39,7 @@ const VIEWS = [
   { key: "plan", label: "Plan ahead" },
   { key: "number", label: "My number" },
   { key: "explore", label: "Explore" },
+  { key: "got", label: "What people got" },
 ];
 // Links from earlier versions of the page
 const PHASE_HELP = {
@@ -63,6 +65,12 @@ export default function SimulatorPage() {
     return searchParams.get("num") ? "number" : "plan";
   });
   const [planPhase, setPlanPhase] = useState(PLAN_PHASES.includes(searchParams.get("plan")) ? searchParams.get("plan") : "both");
+  // "What people got": which rooms disappeared as each number range came up (derived from availability.json)
+  const [pcls, setPcls] = useState(CLASSES.includes(searchParams.get("pclass")) ? searchParams.get("pclass") : "all");
+  // Pies (default), Bars, Heatmap or Trend; kept in the URL as gview=bars|heatmap|trend (Pies = no parameter) so each can be linked
+  const [gview, setGview] = useState(["bars", "heatmap", "trend"].includes(searchParams.get("gview")) ? searchParams.get("gview") : "pies");
+  // What got picked: the collapsible Buildings section (shared by every view; bld=1 when open)
+  const [bld, setBld] = useState(searchParams.get("bld") === "1");
   // My number: "What are you looking for?" filters (kept in the URL)
   const [filters, setFilters] = useState(() => filtersFromParams((k) => searchParams.get(k)));
   // Explore: show never-filled rooms (default on; off subtracts the leftover L from numerator and denominator)
@@ -105,6 +113,11 @@ export default function SimulatorPage() {
     if (cls) next.set("class", cls);
     if (numStr) next.set("num", numStr);
     if (view === "plan") next.set("plan", planPhase);
+    if (view === "got") {
+      if (pcls !== "all") next.set("pclass", pcls);
+      if (gview !== "pies") next.set("gview", gview);
+      if (bld) next.set("bld", "1");
+    }
     if (view === "number") filtersToParams(filters, (k, v) => next.set(k, v));
     if (view === "explore") {
       next.set("series", series === null ? rawSeries : serializeSeries(series));
@@ -112,7 +125,7 @@ export default function SimulatorPage() {
       if (!showNever) next.set("shown", "0");
     }
     setSearchParams(next, { replace: true });
-  }, [phase, cls, numStr, view, planPhase, filters, series, rawSeries, metric, showNever, setSearchParams]);
+  }, [phase, cls, numStr, view, planPhase, pcls, gview, bld, filters, series, rawSeries, metric, showNever, setSearchParams]);
 
   // Metrics that need every room are unavailable while never-filled rooms are hidden.
   useEffect(() => {
@@ -286,6 +299,10 @@ export default function SimulatorPage() {
                 setMetric={setMetric}
               />
             </>
+          ) : null}
+
+          {view === "got" ? (
+            <SimulatorPicked data={data} phase={phase} setPhase={setPhase} pcls={pcls} setPcls={setPcls} gview={gview} setGview={setGview} bld={bld} setBld={setBld} />
           ) : null}
         </>
       ) : null}

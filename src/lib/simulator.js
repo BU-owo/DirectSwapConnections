@@ -12,10 +12,15 @@ export const CLASS_LABELS = { senior: "Senior", junior: "Junior", soph: "Soph" }
 const SIZE_ORDER = ["Single", "Double", "Triple", "Quad"];
 export const TIME_ZONE = "America/New_York";
 
+/** Vite's base path ("/" in dev and on the custom domain); "/" when running under Node (checks). */
+function baseUrl() {
+  return (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "/";
+}
+
 /**
  * Fetch and sanity-check the availability data. Throws an Error with a user-facing message.
  */
-export async function loadAvailability(url = "/data/availability.json") {
+export async function loadAvailability(url = `${baseUrl()}data/availability.json`) {
   let res;
   try {
     res = await fetch(url);
@@ -709,7 +714,7 @@ export function windowAt(meta, t) {
 export { CLAUSE_LABEL, CLAUSE_ORDER };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// "Plan ahead": where a class ended up, and what number it takes
+// "Plan ahead": what number it takes
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const PLAN_PHASES = ["internal", "community", "both"];
@@ -723,69 +728,6 @@ const BUILDING_DISPLAY = {
 export const buildingLabel = (b) => BUILDING_DISPLAY[b] || b;
 export const styleLabel = (k) => STYLE_LABEL[k] || k;
 export const SCENARIOS = [0.1, 0.25, 0.5, 0.75, 0.9];
-
-/** Window keys for a class and a plan phase ("both" = Internal + Community). */
-export function windowKeysFor(cls, planPhase) {
-  const ph = planPhase === "both" ? ["internal", "community"] : [planPhase];
-  return ph.map((p) => `${p}_${cls}`);
-}
-
-const takenIn = (cat, keys) => keys.reduce((a, k) => a + ((cat.spacesTaken && cat.spacesTaken[k]) || 0), 0);
-
-/** Net spaces taken across all categories in the given windows. */
-export function takenTotal(data, keys) {
-  return data.categories.reduce((a, c) => a + takenIn(c, keys), 0);
-}
-
-/** Spaces taken grouped by a category field (size / kind / building), with shares of the total. */
-export function takenBy(data, keys, field) {
-  const total = takenTotal(data, keys);
-  const m = new Map();
-  for (const c of data.categories) m.set(c[field], (m.get(c[field]) || 0) + takenIn(c, keys));
-  return [...m.entries()].map(([key, count]) => ({ key, count, share: total ? count / total : 0 }));
-}
-
-/** By size in Single..Quad order (zero rows kept). */
-export function takenBySize(data, keys) {
-  const rows = takenBy(data, keys, "size");
-  return SIZE_ORDER.map((k) => rows.find((r) => r.key === k) || { key: k, count: 0, share: 0 });
-}
-
-/** By style (kind), largest first, with display names. */
-export function takenByStyle(data, keys) {
-  return takenBy(data, keys, "kind")
-    .map((r) => ({ ...r, label: styleLabel(r.key) }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
-
-/** By building (display names), largest first; StuVi1/StuVi2 follow a combined StuVi row (a subtotal). */
-export function takenByBuilding(data, keys) {
-  const rows = takenBy(data, keys, "building").filter((r) => r.count > 0);
-  const stuvi = rows.filter((r) => r.key.startsWith("StuVi")).sort((a, b) => a.key.localeCompare(b.key));
-  const others = rows.filter((r) => !r.key.startsWith("StuVi")).map((r) => ({ ...r, label: buildingLabel(r.key) }));
-  const items = [...others];
-  if (stuvi.length) {
-    const count = stuvi.reduce((a, r) => a + r.count, 0);
-    const total = takenTotal(data, keys);
-    items.push({ key: "StuVi", label: "StuVi (combined)", count, share: total ? count / total : 0, subtotal: true, children: stuvi.map((r) => ({ ...r, label: r.key, child: true })) });
-  }
-  items.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-  return items.flatMap((r) => (r.children ? [{ ...r, children: undefined }, ...r.children] : [r]));
-}
-
-/** Style x size cross-tab of spaces taken: { styles:[{key,label,cells:[n],total}], sizes, max, total }. */
-export function crossTab(data, keys) {
-  const kinds = [...new Set(data.categories.map((c) => c.kind))];
-  const styles = kinds.map((k) => {
-    const cells = SIZE_ORDER.map((sz) =>
-      data.categories.filter((c) => c.kind === k && c.size === sz).reduce((a, c) => a + takenIn(c, keys), 0)
-    );
-    return { key: k, label: styleLabel(k), cells, total: cells.reduce((a, b) => a + b, 0) };
-  });
-  styles.sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
-  const max = Math.max(1, ...styles.flatMap((r) => r.cells));
-  return { styles, sizes: SIZE_ORDER, max, total: styles.reduce((a, r) => a + r.total, 0) };
-}
 
 /** Spaces already taken when the scrape began (before Internal), not attributed to any class. */
 export function preInternalSpaces(data) {
@@ -1128,4 +1070,528 @@ export function sortSlotRows(rows, key, dir = "desc") {
     const c = typeof x === "string" ? x.localeCompare(y, "en", { numeric: true }) : x === y ? 0 : x < y ? -1 : 1;
     return c * sign || a.cat.name.localeCompare(b.cat.name, "en", { numeric: true });
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "What people got": which rooms disappeared as each range of housing numbers came up (from availability.json only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const PICK_MIN = 20; // a bin with fewer spaces than this says "very few picked" (noise, not privacy)
+export const PICK_DIM_KEYS = ["size", "type", "area", "building"];
+export const KIND_NAME = { Apt: "Apartment", Studio: "Studio", Dorm: "Dorm", Suite: "Suite", "Semi-Suite": "Semi-suite" };
+
+export const PICK_DIMS = {
+  size: {
+    label: "Room size",
+    order: ["Single", "Double", "Triple", "Quad", "Other"],
+    colors: { Single: "#1aa39b", Double: "#f2c94c", Triple: "#8e5bd1", Quad: "#e07b39", Other: "#9aa0a6" },
+  },
+  type: {
+    label: "Room type",
+    order: ["Apartment", "Studio", "Dorm", "Suite", "Semi-suite"],
+    colors: { Apartment: "#8ecae6", Studio: "#1d4e89", Dorm: "#f48fb1", Suite: "#c62828", "Semi-suite": "#e07b39" },
+  },
+  area: {
+    label: "Area",
+    order: ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"],
+    colors: { "Large dorms": "#e0566e", Brownstones: "#f2c94c", Apartments: "#4caf50", StuVi: "#3f7fd9", Fenway: "#8e5bd1", Other: "#9aa0a6" },
+  },
+  building: { label: "Building", order: [], colors: {} },
+  bldg: { label: "Building", order: [], colors: {} }, // mapped building labels; filled from BUILDINGS below
+};
+
+/** Readable text color (dark or white) for a background color. */
+export function textOn(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? "#1b1b1b" : "#ffffff";
+}
+
+/** Building name -> area (name based). */
+export function areaOfBuilding(name) {
+  const s = String(name || "").toLowerCase();
+  if (/stuvi|student village/.test(s)) return "StuVi";
+  if (/fenway/.test(s)) return "Fenway";
+  if (/apartment|\bapts?\b/.test(s)) return "Apartments";
+  if (/brownstone|bay state|\beast\b|\bcentral\b/.test(s)) return "Brownstones";
+  if (/\bwest\b|warren|towers?\b|kilachand|danielsen|1019|hojo|howard johnson|\b575\b|610 beacon/.test(s)) return "Large dorms";
+  return "Other";
+}
+
+/**
+ * Area of a category: StuVi stays StuVi, apartment-kind rooms are Apartments (the data files South Campus apartments
+ * under a brownstone building), everything else follows its building.
+ */
+export function areaOfCategory(cat) {
+  const byBuilding = areaOfBuilding(cat.building);
+  if (byBuilding === "StuVi" || byBuilding === "Fenway") return byBuilding;
+  if (cat.kind === "Apt") return "Apartments";
+  return byBuilding;
+}
+
+/** When a class's window ends for this purpose: the next window's opening (late picks land there), or the end of the data. */
+export function windowEndTime(meta, phase, cls) {
+  const ws = [...meta.windows].sort((a, b) => a.opensAt - b.opensAt);
+  const i = ws.findIndex((w) => w.phase === phase && w.cls === cls);
+  return i >= 0 && i + 1 < ws.length ? ws[i + 1].opensAt : indexToTime(meta, gridLengthFromMeta(meta) - 1);
+}
+
+/**
+ * Spaces that disappeared as each 1000-number range of a class came up. For bin [a, a+1000) taken_c = max(0,
+ * openSpaces_c(t(a)) - openSpaces_c(t(a+1000))) from the interpolated grid, per category. The class's last bin runs until the next
+ * window opens (late picks by earlier numbers land there; this also makes the bins add up to the class's window).
+ * Returns [{ from, to, n, cats: [{ cat, taken }] }].
+ */
+export function pickBins(data, phase, cls) {
+  const { meta, anchors } = data;
+  const [lo, hi] = meta.classRanges[cls];
+  const tOf = makeNumberToTime(anchors, phase);
+  const bins = [];
+  for (let a = lo; a <= hi; a += 1000) {
+    const last = a + 1000 > hi;
+    const t0 = tOf(a);
+    const t1 = Math.max(t0, last ? windowEndTime(meta, phase, cls) : tOf(a + 1000));
+    const cats = data.categories
+      .map((cat) => ({ cat, taken: Math.max(0, valueAtTime(cat.openSpaces, meta, t0) - valueAtTime(cat.openSpaces, meta, t1)) }))
+      .filter((x) => x.taken > 0);
+    bins.push({ from: a, to: Math.min(a + 999, hi), n: cats.reduce((s, x) => s + x.taken, 0), cats });
+  }
+  return bins;
+}
+
+/** "All {class}": the bins added together. */
+export function pickTotal(bins) {
+  const m = new Map();
+  for (const b of bins) for (const x of b.cats) m.set(x.cat, (m.get(x.cat) || 0) + x.taken);
+  const cats = [...m.entries()].map(([cat, taken]) => ({ cat, taken }));
+  return { from: bins.length ? bins[0].from : 0, to: bins.length ? bins[bins.length - 1].to : 0, n: cats.reduce((s, x) => s + x.taken, 0), cats };
+}
+
+// ── Building map: the single source of truth for building labels, their area and color ──
+
+/** Building labels in display order (grouped by area), each with its area and color. */
+export const BUILDINGS = [
+  { label: "Warren Towers", area: "Large dorms", color: "#ffb3c1" },
+  { label: "West Campus", area: "Large dorms", color: "#ff5c44" },
+  { label: "The Towers", area: "Large dorms", color: "#ff9672" },
+  { label: "610 Beacon (Myles)", area: "Large dorms", color: "#ff2db4" },
+  { label: "Kilachand Hall", area: "Large dorms", color: "#ff2200" },
+  { label: "Danielsen Hall", area: "Large dorms", color: "#ff8000" },
+  { label: "1019 Comm Ave", area: "Large dorms", color: "#ff88b8" },
+  { label: "HoJo", area: "Large dorms", color: "#ffac4d" },
+  { label: "Bay State Brownstone", area: "Brownstones", color: "#ffd000" },
+  { label: "East and Central Campus Brownstone", area: "Brownstones", color: "#f9f7c9" },
+  { label: "South Campus Brownstone", area: "Brownstones", color: "#efe480" },
+  { label: "South Campus Apartment", area: "Apartments", color: "#35a865" },
+  { label: "East/Bay State Apartment", area: "Apartments", color: "#88ee88" },
+  { label: "StuVi 1", area: "StuVi", color: "#82c4f8" },
+  { label: "StuVi 2", area: "StuVi", color: "#3f77ad" },
+  { label: "Fenway", area: "Fenway", color: "#8e5bd1" },
+  { label: "Other", area: "Other", color: "#757575" },
+];
+/** Short names for labels inside charts (the full label stays in tooltips and legends). */
+export const BUILDING_SHORT = {
+  "Warren Towers": "Warren",
+  "West Campus": "West",
+  "The Towers": "Towers",
+  "610 Beacon (Myles)": "610 Beacon",
+  "Kilachand Hall": "Kilachand",
+  "Danielsen Hall": "Danielsen",
+  "1019 Comm Ave": "1019",
+  "Bay State Brownstone": "Bay State",
+  "East and Central Campus Brownstone": "East & Central",
+  "South Campus Brownstone": "South Brown.",
+  "South Campus Apartment": "South Apts",
+  "East/Bay State Apartment": "East/BSR Apts",
+};
+export const shortName = (label) => BUILDING_SHORT[label] || label;
+/** Area of a building label (for tooltips). */
+export const areaOfLabel = (label) => (BUILDINGS.find((b) => b.label === label) || {}).area;
+const BUILDING_BY_LABEL = Object.fromEntries(BUILDINGS.map((b) => [b.label, b]));
+PICK_DIMS.bldg.order = BUILDINGS.map((b) => b.label);
+PICK_DIMS.bldg.colors = Object.fromEntries(BUILDINGS.map((b) => [b.label, b.color]));
+
+/**
+ * Raw building name (+ room kind; apartment-style rooms in brownstones are counted as apartments) -> a BUILDINGS entry.
+ * Anything not recognised is "Other" (see unmappedBuildings).
+ */
+export function buildingOfCategory(cat) {
+  const n = String(cat.building || "").toLowerCase();
+  const apt = cat.kind === "Apt";
+  let label = null;
+  if (/stuvi|student village/.test(n)) label = /2/.test(n) ? "StuVi 2" : "StuVi 1";
+  else if (/fenway/.test(n)) label = "Fenway";
+  else if (apt) label = /south/.test(n) ? "South Campus Apartment" : /bsr|bay state|comm ave|danielsen|kenmore|east|central/.test(n) ? "East/Bay State Apartment" : null;
+  else if (/bsr|bay state/.test(n)) label = "Bay State Brownstone";
+  else if (/comm ave brownstone|danielsen brownstone|kenmore|east|central/.test(n)) label = "East and Central Campus Brownstone";
+  else if (/south brownstone|exiled/.test(n)) label = "South Campus Brownstone";
+  else if (/warren/.test(n)) label = "Warren Towers";
+  else if (/^west\b|west campus/.test(n)) label = "West Campus";
+  else if (/the towers/.test(n)) label = "The Towers";
+  else if (/myles|610/.test(n)) label = "610 Beacon (Myles)";
+  else if (/kilachand/.test(n)) label = "Kilachand Hall";
+  else if (/danielsen/.test(n)) label = "Danielsen Hall";
+  else if (/1019/.test(n)) label = "1019 Comm Ave";
+  else if (/hojo|howard johnson|\b575\b/.test(n)) label = "HoJo";
+  return BUILDING_BY_LABEL[label || "Other"];
+}
+
+/** Raw building names that fall into "Other" (for a one-time dev console note). */
+export function unmappedBuildings(data) {
+  return [...new Set(data.categories.filter((c) => buildingOfCategory(c).label === "Other").map((c) => c.building))].sort();
+}
+
+const dimName = (cat, dim) =>
+  dim === "size" ? (PICK_DIMS.size.order.includes(cat.size) ? cat.size : "Other") : dim === "type" ? KIND_NAME[cat.kind] || cat.kind : dim === "area" ? areaOfCategory(cat) : dim === "bldg" ? buildingOfCategory(cat).label : cat.building;
+
+/** Spaces taken per size / type / area / building name for a bin: { name: spaces }. */
+export function pickCounts(bin, dim) {
+  const out = {};
+  for (const { cat, taken } of bin.cats) out[dimName(cat, dim)] = (out[dimName(cat, dim)] || 0) + taken;
+  return out;
+}
+
+/** Shares in the dimension's own order: [{ name, count, share, color }]. */
+export function pickShares(counts, dim) {
+  const cfg = PICK_DIMS[dim];
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const rank = (n) => {
+    const i = cfg.order.indexOf(n);
+    return i < 0 ? cfg.order.length : i;
+  };
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count, share: total ? count / total : 0, color: cfg.colors[name] || "#9aa0a6" }))
+    .sort((a, b) => rank(a.name) - rank(b.name) || b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/** Buildings ranked by spaces taken; each carries its area color for a thin left border. */
+export function pickBuildingRanking(counts) {
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  return Object.entries(counts)
+    .map(([name, count]) => {
+      const area = areaOfBuilding(name);
+      return { name, count, share: total ? count / total : 0, area, color: PICK_DIMS.area.colors[area] || "#9aa0a6" };
+    })
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+// ── Heatmap view of the same derivation ──
+
+/** Heatmap column groups: one hue each (teal size, blue type, orange area), darker than the bar colors so white text reads. */
+export const HEAT_GROUPS = [
+  { key: "size", label: "Room size", names: ["Single", "Double", "Triple", "Quad"], hue: [14, 124, 118] },
+  { key: "type", label: "Room type", names: ["Apartment", "Studio", "Dorm", "Suite", "Semi-suite"], hue: [44, 95, 179] },
+  { key: "area", label: "Area", names: ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"], hue: [194, 90, 20] },
+];
+
+/**
+ * Table model for one class: columns grouped by size / type / area and rows "All {class}" then one per 1000-bin.
+ * Columns come from opts.groups (the fixed list from heatGroups) or, by default, those with picks in this class / opts.union.
+ * A cell is { group, name, share, count, pct, dash, bold }: pct is the rounded share, dash is true under 1%, bold marks the
+ * largest cell of its group in the row. Bins under PICK_MIN spaces are { few: true } with no cells.
+ */
+export function heatmapTable(bins, clsName, opts = {}) {
+  const total = pickTotal(bins);
+  const colTotals = (opts.union || [bins]).map(pickTotal);
+  const groups =
+    opts.groups ||
+    HEAT_GROUPS.map((g) => {
+      const cs = colTotals.map((t) => pickCounts(t, g.key));
+      return { ...g, names: g.names.filter((n) => cs.some((c) => (c[n] || 0) > 0)) };
+    }).filter((g) => g.names.length > 0);
+  const makeRow = (key, label, bin, all) => {
+    const few = !all && bin.n < PICK_MIN;
+    const row = { key, label, n: bin.n, all, few, cells: [] };
+    if (few) return row;
+    for (const g of groups) {
+      const counts = pickCounts(bin, g.key);
+      const sum = Object.values(counts).reduce((a, b) => a + b, 0);
+      const cells = g.names.map((name) => {
+        const count = counts[name] || 0;
+        const share = sum ? count / sum : 0;
+        return { group: g.key, name, count, share, pct: Math.round(share * 100), dash: share < 0.01, bold: false };
+      });
+      const top = cells.reduce((best, c) => (c.share > (best ? best.share : 0) ? c : best), null);
+      if (top) top.bold = true;
+      row.cells.push(...cells);
+    }
+    return row;
+  };
+  return {
+    groups: groups.map((g) => ({ ...g, span: g.names.length })),
+    columns: groups.flatMap((g) => g.names.map((name) => ({ group: g.key, name, kind: "plain" }))),
+    rows: [...(opts.noAll ? [] : [makeRow("all", `All ${clsName}`, total, true)]), ...bins.map((b) => makeRow(`${b.from}-${b.to}`, `${b.from}-${b.to}`, b, false))],
+  };
+}
+
+/** "By class": one "All {class}" row per class (names = { senior: "Seniors", ... }), same columns for all three so values compare. */
+export function heatmapSummary(binsByClass, names, groups) {
+  const union = CLASSES.map((c) => binsByClass[c]);
+  const tabs = CLASSES.map((c) => heatmapTable(binsByClass[c], names[c], { union, groups }));
+  return { groups: tabs[0].groups, columns: tabs[0].columns, rows: tabs.map((t, i) => ({ ...t.rows[0], key: CLASSES[i] })) };
+}
+
+/** Cell colors: one hue per group, alpha proportional to the share; white text above 55%. */
+export function heatCellStyle(share, group) {
+  const rgb = HEAT_GROUPS.find((x) => x.key === group).hue;
+  return { background: `rgba(${rgb.join(",")},${(0.06 + 0.94 * share).toFixed(2)})`, color: share > 0.55 ? "#ffffff" : "#1b1b1b" };
+}
+
+// ── Trend view: share of spaces taken per 1000-bin across all classes, as stacked areas ──
+
+/**
+ * Model for one dimension: bins of every class in number order. points[i] = { from, to, mid, n, few, shares: { name: share },
+ * counts: { name: spaces } } (few = fewer than PICK_MIN spaces, so no shares are drawn); names = the bands bottom to top.
+ */
+export function trendModel(allBins, dim) {
+  const bins = [...allBins].sort((a, b) => a.from - b.from);
+  const cfg = PICK_DIMS[dim];
+  const seen = new Set();
+  const points = bins.map((b) => {
+    const counts = pickCounts(b, dim);
+    const few = b.n < PICK_MIN;
+    const shares = {};
+    for (const s of pickShares(counts, dim)) {
+      shares[s.name] = s.share;
+      if (!few) seen.add(s.name);
+    }
+    return { from: b.from, to: b.to, mid: (b.from + b.to) / 2, n: b.n, few, shares, counts };
+  });
+  const rank = (n) => (cfg.order.includes(n) ? cfg.order.indexOf(n) : cfg.order.length);
+  const names = [...seen].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  return { dim, names, colors: cfg.colors, points, x0: bins.length ? bins[0].from : 0, x1: bins.length ? bins[bins.length - 1].to + 1 : 1 };
+}
+
+/** Runs of consecutive bins with enough spaces: [[pointIndex, ...], ...]. Bins in between are the gaps. */
+export function trendRuns(points) {
+  const runs = [];
+  let cur = null;
+  points.forEach((p, i) => {
+    if (p.few) cur = null;
+    else {
+      if (!cur) runs.push((cur = []));
+      cur.push(i);
+    }
+  });
+  return runs;
+}
+
+/** Monotone cubic (Fritsch-Carlson) through [x, y] pixel points: [{ c1, c2, p }] per segment; never overshoots the points. */
+export function monotoneSegments(pts) {
+  const n = pts.length;
+  if (n < 2) return [];
+  const h = [];
+  const d = [];
+  for (let i = 0; i < n - 1; i++) {
+    h.push(pts[i + 1][0] - pts[i][0]);
+    d.push((pts[i + 1][1] - pts[i][1]) / h[i]);
+  }
+  const m = new Array(n);
+  m[0] = d[0];
+  m[n - 1] = d[n - 2];
+  for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const a = m[i] / d[i];
+    const b = m[i + 1] / d[i];
+    const s = a * a + b * b;
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * a * d[i];
+      m[i + 1] = t * b * d[i];
+    }
+  }
+  return pts.slice(0, -1).map((p, i) => ({
+    c1: [p[0] + h[i] / 3, p[1] + (m[i] * h[i]) / 3],
+    c2: [pts[i + 1][0] - h[i] / 3, pts[i + 1][1] - (m[i + 1] * h[i]) / 3],
+    p: pts[i + 1],
+  }));
+}
+
+/**
+ * The one fixed column list every heatmap table uses: HEAT_GROUPS order, computed from every class and both phases.
+ * A column is left out only when it is zero everywhere (every class, every bin, both phases).
+ */
+export function heatGroups(data) {
+  const seen = { size: new Set(), type: new Set(), area: new Set() };
+  for (const phase of ["community", "internal"])
+    for (const c of CLASSES) {
+      const total = pickTotal(pickBins(data, phase, c));
+      for (const g of HEAT_GROUPS) for (const [n, v] of Object.entries(pickCounts(total, g.key))) if (v > 0) seen[g.key].add(n);
+    }
+  return HEAT_GROUPS.map((g) => ({ ...g, names: g.names.filter((n) => seen[g.key].has(n)) })).filter((g) => g.names.length > 0);
+}
+
+// ── Pies view ──
+
+/** Slices in legend order, clockwise from 12 o'clock: [{ name, share, count, color, a0, a1 }] (angles in radians, 0 = 12 o'clock). */
+export function pieSlices(shares) {
+  let a = 0;
+  const out = [];
+  for (const s of shares) {
+    if (!(s.share > 0)) continue;
+    const a1 = a + s.share * 2 * Math.PI;
+    out.push({ name: s.name, share: s.share, count: s.count, color: s.color, a0: a, a1 });
+    a = a1;
+  }
+  return out;
+}
+
+/**
+ * Outside labels for slices of at least minShare: each side of the pie is laid out top to bottom with at least `gap` px between
+ * labels (nudged down, then up); if they still do not fit, the smallest slice on that side loses its label.
+ * Returns [{ name, share, side (-1 left, 1 right), px, py (pie edge), ex, ey (elbow), tx, ty (text anchor) }].
+ */
+export function pieLabelLayout(slices, { cx, cy, r, minShare = 0.08, gap = 13, lead = 12 }) {
+  const cands = slices
+    .filter((s) => s.share >= minShare)
+    .map((s) => {
+      const mid = (s.a0 + s.a1) / 2;
+      return { s, mid, side: Math.sin(mid) >= 0 ? 1 : -1, y: cy - (r + lead) * Math.cos(mid) };
+    });
+  const top = cy - r - lead - 4;
+  const bottom = cy + r + lead + 4;
+  const out = [];
+  for (const side of [-1, 1]) {
+    let list = cands.filter((c) => c.side === side).sort((a, b) => a.y - b.y);
+    for (;;) {
+      const ys = list.map((c) => c.y);
+      for (let i = 1; i < ys.length; i++) ys[i] = Math.max(ys[i], ys[i - 1] + gap);
+      if (ys.length && ys[ys.length - 1] > bottom) {
+        ys[ys.length - 1] = bottom;
+        for (let i = ys.length - 2; i >= 0; i--) ys[i] = Math.min(ys[i], ys[i + 1] - gap);
+      }
+      if (!ys.length || ys[0] >= top) {
+        list.forEach((c, i) => {
+          const sn = Math.sin(c.mid);
+          const cs = Math.cos(c.mid);
+          out.push({
+            name: c.s.name,
+            share: c.s.share,
+            side,
+            px: cx + r * sn,
+            py: cy - r * cs,
+            ex: cx + (r + 8) * sn,
+            ey: cy - (r + 8) * cs,
+            tx: cx + (r + 8) * sn + side * 6,
+            ty: ys[i],
+          });
+        });
+        break;
+      }
+      const smallest = list.reduce((m, c) => (c.s.share < m.s.share ? c : m), list[0]);
+      list = list.filter((c) => c !== smallest);
+    }
+  }
+  return out;
+}
+
+
+// ── By building: share of spaces taken per coarse number range, per building ──
+
+/** Coarse number ranges per class for the By building table. */
+export const BUILDING_RANGES = {
+  senior: [[1000, 3999], [4000, 6999], [7000, 9999]],
+  junior: [[10000, 12999], [13000, 15999], [16000, 19999]],
+  soph: [[20000, 22999], [23000, 25999], [26000, 29999]],
+};
+const AREA_ORDER = ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"];
+
+/**
+ * Model for the By building table. cols = one per coarse range of the shown classes: { cls, label, n, few, bin }.
+ * areas = [{ area, color, rows: [{ label, color, total, cells: [{ count, share, pct, dash }] }] }] in area order; buildings inside an
+ * area are ordered by their overall share across every class, and buildings with nothing in the shown columns are skipped.
+ * A cell is the building's share of all spaces taken in that column's range.
+ */
+export function buildingTable(binsByClass, classes) {
+  const mk = (cls) =>
+    BUILDING_RANGES[cls].map(([from, to]) => {
+      const bin = pickTotal(binsByClass[cls].filter((b) => b.from >= from && b.to <= to));
+      return { cls, from, to, label: `${from}-${to}`, n: bin.n, few: bin.n < PICK_MIN, bin, counts: pickCounts(bin, "bldg") };
+    });
+  const cols = classes.flatMap(mk);
+  const overall = {};
+  for (const c of CLASSES.flatMap(mk)) for (const [k, v] of Object.entries(c.counts)) overall[k] = (overall[k] || 0) + v;
+  const areas = [];
+  for (const area of AREA_ORDER) {
+    const rows = BUILDINGS.filter((b) => b.area === area)
+      .map((b) => ({
+        label: b.label,
+        color: b.color,
+        total: overall[b.label] || 0,
+        cells: cols.map((c) => {
+          const count = c.few ? 0 : c.counts[b.label] || 0;
+          const share = c.few || !c.n ? 0 : count / c.n;
+          return { count, share, pct: Math.round(share * 100), dash: share < 0.005 };
+        }),
+      }))
+      .filter((r) => r.cells.some((c) => c.count > 0))
+      .sort((a, b) => b.total - a.total);
+    if (rows.length) areas.push({ area, color: PICK_DIMS.area.colors[area], rows });
+  }
+  return { cols, areas };
+}
+
+/** Cell style for the By building table: the building's own color, alpha scaled by the share (full at 40%+), white text above 55%. */
+export function buildingCellStyle(share, hex) {
+  const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return { background: `rgba(${rgb.join(",")},${(0.08 + 0.92 * Math.min(1, share / 0.4)).toFixed(2)})`, color: share > 0.55 ? "#ffffff" : "#1b1b1b" };
+}
+
+// ── Plan ahead: separate, non-overlapping sections ──
+
+const PLAN_AREAS = ["Large dorms", "Brownstones", "Apartments", "StuVi", "Fenway", "Other"];
+
+/**
+ * Sections of the Plan ahead table. Inside a section every category is in exactly one group, so rows never overlap.
+ * Groups carry { label, cats, series, area? }; the building section's groups use the building map (short names in `short`).
+ */
+export function planSections(data) {
+  const cats = data.categories;
+  const mk = (label, list, extra = {}) => ({ label, cats: list, series: makeSeries({ cat: list.map((c) => c.name) }, label), ...extra });
+  const bySize = SIZE_ORDER.map((sz) => ({ label: sz, cats: cats.filter((c) => c.size === sz), series: makeSeries({ size: [sz] }) })).filter((g) => g.cats.length);
+  const byType = ["Apt", "Studio", "Dorm", "Suite", "Semi-Suite"]
+    .map((k) => ({ label: KIND_NAME[k], cats: cats.filter((c) => c.kind === k), series: makeSeries({ kind: [k] }) }))
+    .filter((g) => g.cats.length);
+  const byArea = PLAN_AREAS.map((a) => mk(a, cats.filter((c) => buildingOfCategory(c).area === a))).filter((g) => g.cats.length);
+  const byBuilding = BUILDINGS.map((b) => mk(b.label, cats.filter((c) => buildingOfCategory(c).label === b.label), { area: b.area, short: shortName(b.label), color: b.color })).filter((g) => g.cats.length);
+  return [
+    { key: "size", title: "By room size", caption: "Every room is in exactly one row.", groups: bySize },
+    { key: "type", title: "By room type", caption: "Every room is in exactly one row.", groups: byType },
+    { key: "area", title: "By area", caption: "StuVi is counted separately from other apartments.", groups: byArea },
+    { key: "bldg", title: "By building", caption: "Every room is in exactly one row.", groups: byBuilding },
+  ];
+}
+
+/** The reference group "All rooms" over the given categories (same numbers in every section). */
+export function allRoomsGroup(list) {
+  return { label: "All rooms", cats: list, series: makeSeries({ size: [...SIZE_ORDER] }, "All rooms"), all: true };
+}
+
+
+// ── Room type x size crosstab for What people got ──
+
+/** Row order and display names of the crosstab. */
+export const CROSS_KINDS = [["Apt", "Apartment"], ["Suite", "Suite"], ["Semi-Suite", "Semi-Suite"], ["Dorm", "Dorm"], ["Studio", "Studio"]];
+
+/**
+ * Room type x size crosstab of net spaces taken (same derivation as pickBins), summed over the given classes.
+ * Returns { sizes, rows: [{ key, label, cells: [n], total }], colTotals, total, max }.
+ */
+export function pickCrossTab(binsByClass, classes) {
+  const sizes = SIZE_ORDER;
+  const grid = Object.fromEntries(CROSS_KINDS.map(([k]) => [k, sizes.map(() => 0)]));
+  for (const c of classes)
+    for (const b of binsByClass[c])
+      for (const { cat, taken } of b.cats) {
+        const i = sizes.indexOf(cat.size);
+        if (grid[cat.kind] && i >= 0) grid[cat.kind][i] += taken;
+      }
+  const rows = CROSS_KINDS.map(([k, label]) => ({ key: k, label, cells: grid[k], total: grid[k].reduce((a, b) => a + b, 0) }));
+  const colTotals = sizes.map((_, i) => rows.reduce((a, r) => a + r.cells[i], 0));
+  return { sizes, rows, colTotals, total: rows.reduce((a, r) => a + r.total, 0), max: Math.max(1, ...rows.flatMap((r) => r.cells)) };
 }
