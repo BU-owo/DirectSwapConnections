@@ -309,7 +309,67 @@ function Layout() {
 /**
  * Root App Component - Wraps Layout with AppProvider context
  */
+/**
+ * Swap features are paused (security review, Nov 2026). While true, the site
+ * shows only a "back in the spring" page + the Selection Simulator, and never
+ * touches Firebase. Flip to false to restore the full site.
+ */
+const SWAP_PAUSED = true;
+
+function PausedNotice() {
+  return (
+    <div className="panel" style={{ maxWidth: 640, margin: "3rem auto", textAlign: "center" }}>
+      <h1 className="panel-title" style={{ fontSize: "2rem" }}>We'll be back in the spring</h1>
+      <p style={{ margin: "1rem 0", color: "var(--sub)" }}>
+        Room swap listings are paused while we make some improvements. Thanks for your patience!
+      </p>
+      <p>
+        In the meantime, check out the <NavLink to="/simulator">Selection Simulator</NavLink>.
+      </p>
+      <p style={{ marginTop: "1.5rem", fontSize: "0.9rem", color: "var(--sub)" }}>
+        Questions? Find us on the{" "}
+        <a href="https://discord.gg/qFXzgSN58c" target="_blank" rel="noopener noreferrer">Terrier Hub Discord</a>.
+      </p>
+    </div>
+  );
+}
+
+function PausedLayout() {
+  return (
+    <>
+      <nav>
+        <NavLink to="/" className="nav-brand">
+          Terrier <span>Housing</span>
+        </NavLink>
+        <div className="nav-menu">
+          <div className="nav-center">
+            <NavLink to="/" end className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}>
+              Home
+            </NavLink>
+            <NavLink to="/simulator" className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}>
+              Selection Simulator
+            </NavLink>
+          </div>
+        </div>
+      </nav>
+      <main>
+        <Routes>
+          <Route path="/" element={<PausedNotice />} />
+          <Route path="/simulator" element={<SimulatorPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <footer>
+        <div className="footer-disclaimer">
+          <strong>Disclaimer:</strong> Not affiliated with or endorsed by Boston University. This is an independent, community-made tool.
+        </div>
+      </footer>
+    </>
+  );
+}
+
 export default function App() {
+  if (SWAP_PAUSED) return <PausedLayout />;
   return (
     // Provide Firebase auth and listing data to entire app via context
     <AppProvider>
