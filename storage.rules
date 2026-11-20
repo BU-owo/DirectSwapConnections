@@ -1,11 +1,9 @@
 rules_version = '2';
+// Firebase Storage is not used (photos live on Cloudinary). Deny everything.
 service firebase.storage {
   match /b/{bucket}/o {
-    match /housing-photos/{campusGroup}/{address}/{layout}/{fileName} {
-  allow read: if request.auth != null
-              && request.auth.token.email.matches(".*@bu\\.edu");
-  allow write: if request.resource.size < 10 * 1024 * 1024
-               && request.resource.contentType.matches('image/.*');
-}
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }

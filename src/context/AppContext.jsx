@@ -73,8 +73,9 @@ export function AppProvider({ children }) {
    * Only fetches listings for authenticated users to respect privacy settings.
    */
   useEffect(() => {
-    // Skip if Firebase DB not initialized
-    if (!db) {
+    // Listings are BU-only (enforced by Firestore rules); don't subscribe
+    // until signed in, and re-subscribe after sign-in.
+    if (!db || !user) {
       setListings([]);
       return () => {};
     }
@@ -101,7 +102,7 @@ export function AppProvider({ children }) {
 
     // Clean up listener on component unmount
     return () => unsub();
-  }, []);
+  }, [user]);
 
   // ─── Contact Information Loader ───────────────────────────────────────────────
 

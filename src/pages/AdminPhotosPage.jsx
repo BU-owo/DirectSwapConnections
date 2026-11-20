@@ -202,7 +202,21 @@ export default function AdminPhotosPage() {
         const q = query(collection(db, "housingSubmissions"), orderBy("submittedAt", "desc"));
         const snapshot = await getDocs(q);
         if (cancelled) return;
-        setSubmissions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        // Only render images hosted on our Cloudinary account (submissions are
+        // user-supplied; never load arbitrary URLs in the admin's browser).
+        const SAFE_PREFIX = "https://res.cloudinary.com/g8fbjp6s/";
+        setSubmissions(
+          snapshot.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              photos: (data.photos || []).filter(
+                (p) => typeof p?.url === "string" && p.url.startsWith(SAFE_PREFIX)
+              ),
+            };
+          })
+        );
       } catch (err) {
         if (!cancelled) setFetchError(err.message || "Failed to load submissions.");
       } finally {

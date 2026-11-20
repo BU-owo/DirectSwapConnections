@@ -2,47 +2,77 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Listings — anyone can read, only @bu.edu Google users can write their own
+    // ── Helpers ────────────────────────────────────────────────────────────
+    // Verified BU Google account only. Rejects email/password or other
+    // providers that could register an unverified "x@bu.edu" address.
+    function isBuUser() {
+      return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.firebase.sign_in_provider == 'google.com'
+          && request.auth.token.email.matches('.*@bu\\.edu');
+    }
+
+    // Photo-review admins. Fail-closed: replace the placeholder with real
+    // admin emails before deploying, or the admin page will stay locked.
+    function isAdmin() {
+      return isBuUser()
+          && request.auth.token.email in ['REPLACE_WITH_ADMIN_EMAIL@bu.edu'];
+    }
+
+    function isOwner(userId) {
+      return isBuUser() && request.auth.uid == userId;
+    }
+
+    // Listings — BU users only (docs include the poster's email and housing
+    // assignment, so they must NOT be world-readable).
     match /listings/{userId} {
-      allow read: if true;
-
-      allow create: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.auth.token.email.matches(".*@bu\\.edu");
-
-      allow update, delete: if request.auth != null
-                            && request.auth.uid == userId;
+      allow read: if isBuUser();
+      allow create, update: if isOwner(userId)
+                            && request.resource.data.email == request.auth.token.email
+                            && request.resource.data.pitch is string
+                            && request.resource.data.pitch.size() <= 2000
+                            && (!('otherDetails' in request.resource.data)
+                                || (request.resource.data.otherDetails is string
+                                    && request.resource.data.otherDetails.size() <= 2000));
+      allow delete: if isOwner(userId);
     }
 
-    // Contacts — only signed-in @bu.edu users can read, owner can write
+    // Contacts — BU users only; owner writes their own.
     match /contacts/{userId} {
-      allow read: if request.auth != null
-                  && request.auth.token.email.matches(".*@bu\\.edu");
-
-      allow create: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.auth.token.email.matches(".*@bu\\.edu");
-
-      allow update, delete: if request.auth != null
-                            && request.auth.uid == userId;
+      allow read: if isBuUser();
+      allow create, update: if isOwner(userId)
+                            && request.resource.data.email == request.auth.token.email;
+      allow delete: if isOwner(userId);
     }
 
-    // Housing Photo Submissions — anyone can submit, only @bu.edu users can read
+    // Housing photo submissions — open create (by design) but strictly
+    // validated; only admins can read. No update/delete from clients.
     match /housingSubmissions/{submissionId} {
-      allow read: if request.auth != null
-                  && request.auth.token.email.matches(".*@bu\\.edu");
+      allow read: if isAdmin();
       allow update, delete: if false;
 
-      allow create: if request.resource.data.keys().hasAll(
-                      ['campusGroup', 'address', 'layout', 'photoTypes', 'photos', 'submittedAt']
-                    )
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['campusGroup', 'address', 'layout', 'photoTypes', 'photos', 'submittedAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['campusGroup', 'address', 'layout', 'photoTypes', 'photos', 'submittedAt'])
                     && request.resource.data.campusGroup is string
+                    && request.resource.data.campusGroup.size() <= 100
                     && request.resource.data.address is string
+                    && request.resource.data.address.size() <= 150
                     && request.resource.data.layout is string
+                    && request.resource.data.layout.size() <= 100
                     && request.resource.data.photoTypes is list
+                    && request.resource.data.photoTypes.size() <= 5
                     && request.resource.data.photos is list
                     && request.resource.data.photos.size() > 0
-                    && request.resource.data.photos.size() <= 20;
+                    && request.resource.data.photos.size() <= 20
+                    && request.resource.data.photos[0].url.matches('https://res\\.cloudinary\\.com/g8fbjp6s/.*')
+                    && request.resource.data.submittedAt == request.time;
+    }
+
+    // Everything else: denied.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
