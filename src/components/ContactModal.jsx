@@ -3,7 +3,7 @@
  * Shows what the lister is looking for with an emphasis on reading matching criteria before contacting.
  * Warns users that contacting outside of matching criteria wastes both parties' time.
  */
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BUILDINGS } from "../../js/housing-data.js";
 
 const NAMED_BUILDING_GROUPS = new Set([
@@ -28,7 +28,28 @@ const LAYOUT_OCCUPANCY_ORDER = {
   Quad: 4,
 };
 
-export default function ContactModal({ listing, contact, myListing, onClose }) {
+export default function ContactModal({ listing, contactId, getContact, myListing, onClose }) {
+  const [contact, setContact] = useState(null);
+  const [contactError, setContactError] = useState("");
+
+  useEffect(() => {
+    if (!contactId || !getContact) return;
+    let cancelled = false;
+    setContact(null);
+    setContactError("");
+    getContact(contactId)
+      .then((data) => { if (!cancelled) setContact(data || {}); })
+      .catch((err) => {
+        if (cancelled) return;
+        setContactError(
+          err?.code === "permission-denied"
+            ? "Post your own listing to see contact info."
+            : "Couldn't load contact info."
+        );
+      });
+    return () => { cancelled = true; };
+  }, [contactId, getContact]);
+
   if (!listing) return null;
 
   const myLayout = myListing?.layout || "";
@@ -193,8 +214,10 @@ export default function ContactModal({ listing, contact, myListing, onClose }) {
         <div className="modal-section" style={{ marginTop: 20, padding: 16, backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: 8 }}>
           <h4 className="modal-section-title">Contact Details</h4>
           <div className="modal-details">
-            {listing.email && (
-              <p><strong>Email:</strong> <a href={`mailto:${listing.email}`} className="contact-link">{listing.email}</a></p>
+            {contactError && <p style={{color: '#dc2626'}}>{contactError}</p>}
+            {!contactError && !contact && <p style={{color: '#aaa'}}>Loading…</p>}
+            {contact?.email && (
+              <p><strong>Email:</strong> <a href={`mailto:${contact.email}`} className="contact-link">{contact.email}</a></p>
             )}
             {contact?.redditUsername && (
               <p><strong>Reddit:</strong> <span style={{color: 'var(--sub)'}}>{contact.redditUsername}</span></p>
@@ -205,7 +228,7 @@ export default function ContactModal({ listing, contact, myListing, onClose }) {
             {contact?.otherContact && (
               <p><strong>Other:</strong> <span style={{color: 'var(--sub)'}}>{contact.otherContact}</span></p>
             )}
-            {!listing.email && !contact?.redditUsername && !contact?.phone && !contact?.otherContact && (
+            {contact && !contact.email && !contact?.redditUsername && !contact?.phone && !contact?.otherContact && (
               <p style={{color: '#aaa'}}>No contact information provided</p>
             )}
           </div>

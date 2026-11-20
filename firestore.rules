@@ -27,8 +27,9 @@ service cloud.firestore {
     // assignment, so they must NOT be world-readable).
     match /listings/{userId} {
       allow read: if isBuUser();
+      // Email lives only in /contacts now — never in the listing itself.
       allow create, update: if isOwner(userId)
-                            && request.resource.data.email == request.auth.token.email
+                            && !('email' in request.resource.data)
                             && request.resource.data.pitch is string
                             && request.resource.data.pitch.size() <= 2000
                             && (!('otherDetails' in request.resource.data)
@@ -37,21 +38,29 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
-    // Contacts — BU users only; owner writes their own.
+    // Contacts — one record at a time (no bulk list). Readable by the owner,
+    // or by a BU user who has an active listing of their own (i.e. an actual
+    // swap participant).
     match /contacts/{userId} {
-      allow read: if isBuUser();
+      allow get: if isOwner(userId)
+                 || (isBuUser()
+                     && exists(/databases/$(database)/documents/listings/$(request.auth.uid)));
+      allow list: if false;
       allow create, update: if isOwner(userId)
                             && request.resource.data.email == request.auth.token.email;
       allow delete: if isOwner(userId);
     }
 
-    // Housing photo submissions — open create (by design) but strictly
+    // Housing photo submissions — signed-in BU users only, strictly
     // validated; only admins can read. No update/delete from clients.
+    // NOTE: the client feature is disabled until uploads are signed
+    // server-side (unsigned Cloudinary uploads can't be authenticated).
     match /housingSubmissions/{submissionId} {
       allow read: if isAdmin();
       allow update, delete: if false;
 
-      allow create: if request.resource.data.keys().hasOnly(
+      allow create: if isBuUser()
+                    && request.resource.data.keys().hasOnly(
                          ['campusGroup', 'address', 'layout', 'photoTypes', 'photos', 'submittedAt'])
                     && request.resource.data.keys().hasAll(
                          ['campusGroup', 'address', 'layout', 'photoTypes', 'photos', 'submittedAt'])

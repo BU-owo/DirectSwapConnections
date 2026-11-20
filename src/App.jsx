@@ -10,7 +10,6 @@ import BrowsePage from "./pages/BrowsePage";
 import HomePage from "./pages/HomePage";
 import SubmitPage from "./pages/SubmitPage";
 import AdminPhotosPage from "./pages/AdminPhotosPage";
-import SubmitPhotosPage from "./pages/SubmitPhotosPage";
 import SimulatorPage from "./pages/SimulatorPage";
 
 /**
@@ -160,12 +159,6 @@ function Layout() {
               Browse Listings
             </NavLink>
             <NavLink
-              to="/submit-photos"
-              className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
-            >
-              Submit Photos
-            </NavLink>
-            <NavLink
               to="/simulator"
               className={({ isActive }) => `nav-tab ${isActive ? "active" : ""}`.trim()}
             >
@@ -275,7 +268,8 @@ function Layout() {
 
           {/* Submit/edit listing page route */}
           <Route path="/submit" element={<SubmitPage />} />
-          <Route path="/submit-photos" element={<SubmitPhotosPage />} />
+          {/* Photo submission disabled pending signed uploads (security review). */}
+          <Route path="/submit-photos" element={<Navigate to="/" replace />} />
           <Route path="/admin-photos" element={<AdminPhotosPage />} />
 
           {/* Housing selection simulator (static data, client-side only) */}

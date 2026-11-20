@@ -143,7 +143,7 @@ function getListingBuildingSortMeta(listing, buildingGroupByName) {
 }
 
 export default function BrowsePage() {
-  const { listings, user, contactsMap, myListing } = useAppContext();
+  const { listings, user, contactsMap, myListing, getContact } = useAppContext();
   const canViewContacts = Boolean(myListing);
   const buildingGroupByName = useMemo(
     () => new Map(BUILDINGS.map((building) => [building.name, building.group])),
@@ -890,7 +890,7 @@ export default function BrowsePage() {
       )}
 
       {expandedListing ? <ExpandModal listing={expandedListing} myListing={myListing} onClose={() => setExpandedId("")} /> : null}
-      {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId) || listings.find(l => l.id === contactModalId)} contact={contactsMap[contactModalId]} myListing={myListing} onClose={() => setContactModalId("")} /> : null}
+      {contactModalId ? <ContactModal listing={filteredListings.find(l => l.id === contactModalId) || listings.find(l => l.id === contactModalId)} contactId={contactModalId} getContact={getContact} myListing={myListing} onClose={() => setContactModalId("")} /> : null}
     </div>
   );
 }

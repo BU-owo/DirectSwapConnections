@@ -7,8 +7,9 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
-  getDocs,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -107,55 +108,41 @@ export function AppProvider({ children }) {
   // ─── Contact Information Loader ───────────────────────────────────────────────
 
   /**
-   * Load all contact information from Firestore when user is authenticated.
-   * Contact details are private - only loaded for authenticated sessions.
-   * Implements cancellation pattern to prevent state updates after unmount.
+   * Load ONLY the signed-in user's own contact record (for prefilling the form).
+   * Other users' contacts are fetched one at a time via getContact(), which the
+   * Firestore rules restrict to swap participants. No bulk reads.
    */
   useEffect(() => {
-    // Skip if Firebase DB not initialized or user not signed in
     if (!db || !user) {
       setContactsMap({});
       return;
     }
-
-    // Cancellation flag to prevent state updates after component unmounts
     let cancelled = false;
-
-    /**
-     * Async function to fetch contacts from Firestore
-     */
-    async function loadContacts() {
-      try {
-        // Fetch all documents from contacts collection
-        const snapshot = await getDocs(collection(db, "contacts"));
-
-        // Skip state update if component unmounted while fetching
-        if (cancelled) return;
-
-        // Build map of contact info keyed by user ID for O(1) lookup
-        const nextMap = {};
-        snapshot.forEach((docRef) => {
-          nextMap[docRef.id] = docRef.data();
-        });
-
-        // Update state with contacts
-        setContactsMap(nextMap);
-      } catch (error) {
-        // Log error for debugging
-        console.error("Failed to load contacts", error);
-        // Clear contacts on error to prevent stale data
+    getDoc(doc(db, "contacts", user.uid))
+      .then((snap) => {
+        if (!cancelled) setContactsMap(snap.exists() ? { [user.uid]: snap.data() } : {});
+      })
+      .catch((error) => {
+        console.error("Failed to load own contact", error);
         if (!cancelled) setContactsMap({});
-      }
-    }
-
-    // Initiate contact loading
-    loadContacts();
-
-    // Cleanup: set flag to prevent state updates if unmounted during fetch
+      });
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  /**
+   * Fetch a single user's contact record. Rejects (permission-denied) unless the
+   * caller has their own listing.
+   */
+  async function getContact(uid) {
+    if (!db || !user) throw new Error("You must be signed in.");
+    if (contactsMap[uid]) return contactsMap[uid];
+    const snap = await getDoc(doc(db, "contacts", uid));
+    const data = snap.exists() ? snap.data() : {};
+    setContactsMap((prev) => ({ ...prev, [uid]: data }));
+    return data;
+  }
 
   // ─── Derived State - Current User's Listing ────────────────────────────────────
 
@@ -227,8 +214,6 @@ export function AppProvider({ children }) {
     const listingData = {
       // Spread all provided listing fields
       ...listingPayload,
-      // Always include user's email
-      email: user.email,
       // Timestamp of last modification (server time for accuracy)
       updatedAt: serverTimestamp(),
       // Only set submission timestamp for new listings
@@ -243,7 +228,8 @@ export function AppProvider({ children }) {
       batch.set(listingRef, listingData);
     } else {
       // For updates, use set with merge to preserve unmapped fields
-      batch.set(listingRef, listingData, { merge: true });
+      // Strip the legacy `email` field (emails now live only in /contacts).
+      batch.set(listingRef, { ...listingData, email: deleteField() }, { merge: true });
     }
 
     // Save contact info with merge to preserve unmapped fields
@@ -325,6 +311,8 @@ export function AppProvider({ children }) {
     saveListing,
     // Listing delete function
     deleteMyListing,
+    // Fetch one other user's contact (rules-gated)
+    getContact,
   };
 
   // Provide context value to all children
