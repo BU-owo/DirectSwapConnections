@@ -137,8 +137,8 @@ export default function HomePage() {
           <div className="home-contact-card">
             <h3 className="home-sub-title">💬 Contact & Help</h3>
             <p>Have a question, found a bug, or need a listing removed?</p>
-            <a className="home-contact-link" href="mailto:directswapconnections@gmail.com">
-              directswapconnections@gmail.com
+            <a className="home-contact-link" href="mailto:terrierhousing@gmail.com">
+              terrierhousing@gmail.com
             </a>
             <p style={{ marginTop: 16 }}>Need broader housing advice? Join the BU student community:</p>
             <a

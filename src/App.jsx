@@ -289,7 +289,7 @@ function Layout() {
 
         {/* Contact information for bug reports and questions */}
         <div className="footer-contact">
-          <strong>Questions or issues?</strong> Email <a href="mailto:directswapconnections@gmail.com">directswapconnections@gmail.com</a> about Terrier Housing
+          <strong>Questions or issues?</strong> Email <a href="mailto:terrierhousing@gmail.com">terrierhousing@gmail.com</a> about Terrier Housing
         </div>
 
         {/* Legacy name information */}
